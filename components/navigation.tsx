@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Separator } from "@/components/ui/separator"
 import { Menu, User, LogIn } from "lucide-react"
 
 const navigationItems = [
@@ -12,8 +14,6 @@ const navigationItems = [
   { name: "Membres", href: "/members" },
   { name: "Actualités", href: "/news" },
   { name: "Projets", href: "/projects" },
-  { name: "Partenariats", href: "/partnerships" },
-  { name: "Étudiants", href: "/students" },
   { name: "Contact", href: "/contact" },
 ]
 
@@ -24,11 +24,30 @@ export function Navigation() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-2xl bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">AA</span>
+          <Link href="/" className="flex items-center space-x-3">
+            <div className="relative h-10 w-10 rounded-2xl flex items-center justify-center overflow-hidden">
+              {/* Replace '/logo.png' with your actual logo path */}
+              <Image
+                src="/images/logo3.png"
+                alt="Alumni Association Logo"
+                width={48}
+                height={48}
+                className="object-contain"
+                priority
+                onError={(e) => {
+                  // Fallback to text logo if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'block';
+                }}
+              />
             </div>
-            <span className="font-bold text-lg">Alumni Association</span>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg leading-tight text-blue-600">Alumni de la Mention Economie</span>
+              <Separator className="bg-blue-600 my-1 w-3/4 mx-auto hidden sm:block" />
+              <span className="text-xs text-muted-foreground hidden sm:block text-center">Université d'Antananarivo</span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}
@@ -45,12 +64,12 @@ export function Navigation() {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm" asChild>
+            {/*<Button variant="ghost" size="sm" asChild>
               <Link href="/login">
                 <LogIn className="h-4 w-4 mr-2" />
                 Connexion
               </Link>
-            </Button>
+            </Button>*/}
             <Button size="sm" asChild>
               <Link href="/members/register">
                 <User className="h-4 w-4 mr-2" />

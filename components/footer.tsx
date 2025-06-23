@@ -56,7 +56,7 @@ export function Footer() {
           <div className="space-y-4">
             <h3 className="font-semibold">Contact</h3>
             <div className="space-y-2 text-sm">
-              <p className="text-muted-foreground">alumni@university.edu</p>
+              <p className="text-muted-foreground">info@ameua.mg</p>
               <div className="flex space-x-2">
                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
                   <Facebook className="h-4 w-4" />

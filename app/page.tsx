@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { Users, Target, Heart, Award, ArrowRight, Play } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 export default function HomePage() {
   return (
@@ -116,6 +118,63 @@ export default function HomePage() {
                 </CardDescription>
               </CardContent>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Campus Gallery Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Notre Université</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Découvrez les espaces qui ont façonné votre parcours et continuent d'inspirer les nouvelles générations
+            </p>
+          </div>
+
+          <div className="max-w-5xl mx-auto">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full"
+            >
+              <CarouselContent className="ml-0">
+                {[
+                  { src: "/images/univ1.jpeg", alt: "Campus principal - Vue d'ensemble" },
+                  { src: "/images/univ2.jpeg", alt: "Bibliothèque universitaire" },
+                  { src: "/images/univ3.jpeg", alt: "Amphithéâtre moderne" },
+                  { src: "/images/univ4.jpeg", alt: "Espace étudiant" },
+                  { src: "/images/univ5.jpeg", alt: "Laboratoires de recherche" },
+                  { src: "/images/univ6.jpeg", alt: "Cour intérieure" },
+                ].map((image, index) => (
+                  <CarouselItem key={index} className="pl-0 md:basis-1/2 lg:basis-1/3">
+                    <div className="p-2">
+                      <Card className="overflow-hidden border-0 shadow-lg rounded-2xl bg-white">
+                        <div className="relative aspect-[4/3] overflow-hidden">
+                          <Image
+                            src={image.src}
+                            alt={image.alt}
+                            fill
+                            className="object-cover transition-transform duration-500 hover:scale-105"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            priority={index < 3}
+                          />
+                        </div>
+                        <CardContent className="p-4">
+                          <p className="text-sm text-muted-foreground text-center font-medium">
+                            {image.alt}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="hidden md:flex -left-8 size-10 bg-white/90 backdrop-blur shadow-lg border-2 hover:bg-white" />
+              <CarouselNext className="hidden md:flex -right-8 size-10 bg-white/90 backdrop-blur shadow-lg border-2 hover:bg-white" />
+            </Carousel>
           </div>
         </div>
       </section>
