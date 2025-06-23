@@ -14,7 +14,7 @@ const upcomingEvents = [
     location: "Auditorium Central, Paris",
     description: "Rencontrez des leaders d'opinion et découvrez les dernières tendances en innovation.",
     attendees: 120,
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://placehold.co/200x300",
     category: "Conférence",
   },
   {
@@ -25,7 +25,7 @@ const upcomingEvents = [
     location: "Rooftop Sky Bar, Lyon",
     description: "Soirée networking décontractée pour échanger avec d'autres alumni.",
     attendees: 45,
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://placehold.co/200x300",
     category: "Networking",
   },
   {
@@ -36,7 +36,7 @@ const upcomingEvents = [
     location: "Incubateur TechHub, Marseille",
     description: "Workshop pratique sur la création d'entreprise avec des entrepreneurs expérimentés.",
     attendees: 30,
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://placehold.co/200x300",
     category: "Formation",
   },
 ]
@@ -50,9 +50,9 @@ const pastEvents = [
     description: "Une soirée exceptionnelle pour célébrer nos réussites et renforcer nos liens.",
     attendees: 200,
     images: [
-      "/placeholder.svg?height=150&width=200",
-      "/placeholder.svg?height=150&width=200",
-      "/placeholder.svg?height=150&width=200",
+      "https://placehold.co/150x200",
+      "https://placehold.co/150x200",
+      "https://placehold.co/150x200",
     ],
     report: "Un événement mémorable qui a rassemblé 200 alumni dans un cadre prestigieux.",
   },
@@ -63,7 +63,7 @@ const pastEvents = [
     location: "Campus Universitaire",
     description: "Rencontres entre étudiants et professionnels pour l'orientation de carrière.",
     attendees: 150,
-    images: ["/placeholder.svg?height=150&width=200", "/placeholder.svg?height=150&width=200"],
+    images: ["https://placehold.co/150x200", "https://placehold.co/150x200"],
     report: "Plus de 30 entreprises représentées et de nombreuses opportunités créées.",
   },
 ]
@@ -76,7 +76,7 @@ const news = [
     category: "Partenariat",
     excerpt:
       "Nous sommes fiers d'annoncer notre nouveau partenariat stratégique avec TechCorp pour offrir des opportunités exclusives à nos membres.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://placehold.co/200x300",
     author: "Marie Dubois",
   },
   {
@@ -86,7 +86,7 @@ const news = [
     category: "Programme",
     excerpt:
       "Notre nouveau programme de mentorat connecte les jeunes diplômés avec des professionnels expérimentés de notre réseau.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://placehold.co/200x300",
     author: "Jean-Pierre Martin",
   },
   {
@@ -95,7 +95,7 @@ const news = [
     date: "2024-01-10",
     category: "Éducation",
     excerpt: "Candidatures ouvertes pour notre bourse d'excellence destinée aux étudiants méritants de l'université.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://placehold.co/200x300",
     author: "Sarah Johnson",
   },
 ]

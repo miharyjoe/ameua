@@ -79,7 +79,7 @@ const testimonials = [
     promo: "Promo 2008",
     quote:
       "L'association m'a permis de développer un réseau international exceptionnel. Les connexions que j'ai établies ont été déterminantes pour ma carrière.",
-    image: "/placeholder.svg?height=100&width=100",
+    image: "https://placehold.co/100x100",
   },
   {
     name: "Jean-Pierre Martin",
@@ -87,7 +87,7 @@ const testimonials = [
     promo: "Promo 2010",
     quote:
       "Le mentorat que j'ai reçu de la part d'anciens diplômés m'a aidé à naviguer les défis de ma carrière. Aujourd'hui, je rends la pareille en accompagnant les jeunes.",
-    image: "/placeholder.svg?height=100&width=100",
+    image: "https://placehold.co/100x100",
   },
   {
     name: "Sarah Johnson",
@@ -95,7 +95,7 @@ const testimonials = [
     promo: "Promo 2012",
     quote:
       "Participer aux projets de l'association m'a donné l'opportunité de contribuer à des causes qui me tiennent à cœur tout en développant mes compétences de leadership.",
-    image: "/placeholder.svg?height=100&width=100",
+    image: "https://placehold.co/100x100",
   },
 ]
 
