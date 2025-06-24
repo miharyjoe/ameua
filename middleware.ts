@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const WHITE_LIST = ['/auth/sign-in', '/auth/sign-up', '/api/auth', '/auth/error', '/auth/forgot-password', '/auth/reset-password']
+// Pages that don't require authentication (public pages)
+const PUBLIC_PAGES = ['/', '/about', '/contact']
+
+// Auth-related pages that don't require authentication
+const AUTH_PAGES = ['/auth/sign-in', '/auth/sign-up', '/api/auth', '/auth/error', '/auth/forgot-password', '/auth/reset-password']
+
+// Pages that require authentication (protected pages)
+const PROTECTED_PAGES = ['/members', '/news', '/projects', '/account']
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -16,19 +23,29 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Allow whitelisted auth paths
-  if (WHITE_LIST.some(path => pathname.startsWith(path))) {
+  // Allow public pages (no authentication required)
+  if (PUBLIC_PAGES.includes(pathname)) {
     return NextResponse.next()
   }
 
-  // Check for session cookie (NextAuth sets this)
-  const sessionToken = request.cookies.get('authjs.session-token') || 
-                      request.cookies.get('__Secure-authjs.session-token')
+  // Allow auth-related pages
+  if (AUTH_PAGES.some(path => pathname.startsWith(path))) {
+    return NextResponse.next()
+  }
+
+  // Check if this is a protected page
+  const isProtectedPage = PROTECTED_PAGES.some(path => pathname.startsWith(path))
   
-  if (!sessionToken) {
-    const url = new URL('/auth/sign-in', request.nextUrl.origin)
-    url.searchParams.set('callbackUrl', pathname)
-    return NextResponse.redirect(url)
+  if (isProtectedPage) {
+    // Check for session cookie (NextAuth sets this)
+    const sessionToken = request.cookies.get('authjs.session-token') || 
+                        request.cookies.get('__Secure-authjs.session-token')
+    
+    if (!sessionToken) {
+      const url = new URL('/auth/sign-in', request.nextUrl.origin)
+      url.searchParams.set('callbackUrl', pathname)
+      return NextResponse.redirect(url)
+    }
   }
 
   return NextResponse.next()
