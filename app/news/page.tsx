@@ -4,103 +4,116 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, MapPin, Users, Clock, ArrowRight, ImageIcon } from "lucide-react"
 import Link from "next/link"
+import { db } from "@/schema/schema"
+import { events, news } from "@/schema/schema"
+import { eq } from "drizzle-orm"
 
-const upcomingEvents = [
-  {
-    id: 1,
-    title: "Conférence Innovation & Leadership",
-    date: "2024-02-15",
-    time: "18:00",
-    location: "Auditorium Central, Paris",
-    description: "Rencontrez des leaders d'opinion et découvrez les dernières tendances en innovation.",
-    attendees: 120,
-    image: "https://placehold.co/200x300",
-    category: "Conférence",
-  },
-  {
-    id: 2,
-    title: "Networking Afterwork",
-    date: "2024-02-22",
-    time: "19:00",
-    location: "Rooftop Sky Bar, Lyon",
-    description: "Soirée networking décontractée pour échanger avec d'autres alumni.",
-    attendees: 45,
-    image: "https://placehold.co/200x300",
-    category: "Networking",
-  },
-  {
-    id: 3,
-    title: "Atelier Entrepreneuriat",
-    date: "2024-03-05",
-    time: "14:00",
-    location: "Incubateur TechHub, Marseille",
-    description: "Workshop pratique sur la création d'entreprise avec des entrepreneurs expérimentés.",
-    attendees: 30,
-    image: "https://placehold.co/200x300",
-    category: "Formation",
-  },
-]
+// Fetch events and news from database
+async function getEvents() {
+  try {
+    const upcomingEvents = await db.select().from(events).where(eq(events.upcoming, true))
+    const archivedEvents = await db.select().from(events).where(eq(events.upcoming, false))
+    return { upcomingEvents, archivedEvents }
+  } catch (error) {
+    console.error("Error fetching events:", error)
+    // Fallback to static data if database is not available
+    return {
+      upcomingEvents: [
+        {
+          id: "1",
+          title: "Conférence Innovation & Leadership",
+          date: new Date("2024-02-15"),
+          time: "18:00",
+          location: "Auditorium Central, Paris",
+          description: "Rencontrez des leaders d'opinion et découvrez les dernières tendances en innovation.",
+          attendees: 120,
+          image: "https://placehold.co/200x300",
+          category: "Conférence",
+          upcoming: true,
+          images: null,
+          report: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "2",
+          title: "Networking Afterwork",
+          date: new Date("2024-02-22"),
+          time: "19:00",
+          location: "Rooftop Sky Bar, Lyon",
+          description: "Soirée networking décontractée pour échanger avec d'autres alumni.",
+          attendees: 45,
+          image: "https://placehold.co/200x300",
+          category: "Networking",
+          upcoming: true,
+          images: null,
+          report: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      archivedEvents: [
+        {
+          id: "3",
+          title: "Gala Annuel 2023",
+          date: new Date("2023-12-10"),
+          time: "19:00",
+          location: "Château de Versailles",
+          description: "Une soirée exceptionnelle pour célébrer nos réussites et renforcer nos liens.",
+          attendees: 200,
+          image: "https://placehold.co/200x300",
+          category: "Gala",
+          upcoming: false,
+          images: JSON.stringify(["https://placehold.co/150x200", "https://placehold.co/150x200"]),
+          report: "Un événement mémorable qui a rassemblé 200 alumni dans un cadre prestigieux.",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]
+    }
+  }
+}
 
-const pastEvents = [
-  {
-    id: 1,
-    title: "Gala Annuel 2023",
-    date: "2023-12-10",
-    location: "Château de Versailles",
-    description: "Une soirée exceptionnelle pour célébrer nos réussites et renforcer nos liens.",
-    attendees: 200,
-    images: [
-      "https://placehold.co/150x200",
-      "https://placehold.co/150x200",
-      "https://placehold.co/150x200",
-    ],
-    report: "Un événement mémorable qui a rassemblé 200 alumni dans un cadre prestigieux.",
-  },
-  {
-    id: 2,
-    title: "Forum Carrières 2023",
-    date: "2023-11-15",
-    location: "Campus Universitaire",
-    description: "Rencontres entre étudiants et professionnels pour l'orientation de carrière.",
-    attendees: 150,
-    images: ["https://placehold.co/150x200", "https://placehold.co/150x200"],
-    report: "Plus de 30 entreprises représentées et de nombreuses opportunités créées.",
-  },
-]
+async function getNews() {
+  try {
+    const newsArticles = await db.select().from(news).where(eq(news.published, true))
+    return newsArticles
+  } catch (error) {
+    console.error("Error fetching news:", error)
+    // Fallback to static data if database is not available
+    return [
+      {
+        id: "1",
+        title: "Nouveau partenariat avec TechCorp",
+        createdAt: new Date("2024-01-20"),
+        category: "Partenariat",
+        excerpt: "Nous sommes fiers d'annoncer notre nouveau partenariat stratégique avec TechCorp pour offrir des opportunités exclusives à nos membres.",
+        content: "Contenu complet de l'article...",
+        image: "https://placehold.co/200x300",
+        author: "Marie Dubois",
+        published: true,
+        updatedAt: new Date(),
+      },
+      {
+        id: "2",
+        title: "Lancement du programme de mentorat",
+        createdAt: new Date("2024-01-15"),
+        category: "Programme",
+        excerpt: "Notre nouveau programme de mentorat connecte les jeunes diplômés avec des professionnels expérimentés de notre réseau.",
+        content: "Contenu complet de l'article...",
+        image: "https://placehold.co/200x300",
+        author: "Jean-Pierre Martin",
+        published: true,
+        updatedAt: new Date(),
+      },
+    ]
+  }
+}
 
-const news = [
-  {
-    id: 1,
-    title: "Nouveau partenariat avec TechCorp",
-    date: "2024-01-20",
-    category: "Partenariat",
-    excerpt:
-      "Nous sommes fiers d'annoncer notre nouveau partenariat stratégique avec TechCorp pour offrir des opportunités exclusives à nos membres.",
-    image: "https://placehold.co/200x300",
-    author: "Marie Dubois",
-  },
-  {
-    id: 2,
-    title: "Lancement du programme de mentorat",
-    date: "2024-01-15",
-    category: "Programme",
-    excerpt:
-      "Notre nouveau programme de mentorat connecte les jeunes diplômés avec des professionnels expérimentés de notre réseau.",
-    image: "https://placehold.co/200x300",
-    author: "Jean-Pierre Martin",
-  },
-  {
-    id: 3,
-    title: "Bourse d'excellence 2024",
-    date: "2024-01-10",
-    category: "Éducation",
-    excerpt: "Candidatures ouvertes pour notre bourse d'excellence destinée aux étudiants méritants de l'université.",
-    image: "https://placehold.co/200x300",
-    author: "Sarah Johnson",
-  },
-]
+export default async function NewsPage() {
+  const { upcomingEvents, archivedEvents } = await getEvents()
+  const newsArticles = await getNews()
 
-export default function NewsPage() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -167,7 +180,7 @@ export default function NewsPage() {
                         <div className="flex items-center text-sm text-muted-foreground">
                           <Calendar className="mr-2 h-4 w-4" />
                           <span>
-                            {new Date(event.date).toLocaleDateString("fr-FR", {
+                            {event.date.toLocaleDateString("fr-FR", {
                               weekday: "long",
                               year: "numeric",
                               month: "long",
@@ -210,7 +223,7 @@ export default function NewsPage() {
               </div>
 
               <div className="space-y-8">
-                {pastEvents.map((event) => (
+                {archivedEvents.map((event) => (
                   <Card key={event.id} className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
                       <div className="space-y-4">
@@ -219,7 +232,7 @@ export default function NewsPage() {
                           <div className="flex items-center text-sm text-muted-foreground">
                             <Calendar className="mr-2 h-4 w-4" />
                             <span>
-                              {new Date(event.date).toLocaleDateString("fr-FR", {
+                              {event.date.toLocaleDateString("fr-FR", {
                                 year: "numeric",
                                 month: "long",
                                 day: "numeric",
@@ -236,10 +249,12 @@ export default function NewsPage() {
                           </div>
                         </div>
                         <p className="text-muted-foreground">{event.description}</p>
-                        <div className="bg-muted/50 p-4 rounded-xl">
-                          <h4 className="font-semibold mb-2">Compte-rendu</h4>
-                          <p className="text-sm text-muted-foreground">{event.report}</p>
-                        </div>
+                        {event.report && (
+                          <div className="bg-muted/50 p-4 rounded-xl">
+                            <h4 className="font-semibold mb-2">Compte-rendu</h4>
+                            <p className="text-sm text-muted-foreground">{event.report}</p>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-4">
                         <div className="flex items-center space-x-2 mb-4">
@@ -247,7 +262,7 @@ export default function NewsPage() {
                           <span className="font-medium">Galerie photos</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          {event.images.map((image, index) => (
+                          {event.images && JSON.parse(event.images).map((image: string, index: number) => (
                             <div key={index} className="aspect-video rounded-xl overflow-hidden">
                               <img
                                 src={image || "/placeholder.svg"}
@@ -276,7 +291,7 @@ export default function NewsPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {news.map((article) => (
+                {newsArticles.map((article) => (
                   <Card
                     key={article.id}
                     className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden hover:shadow-xl transition-shadow"
@@ -292,7 +307,7 @@ export default function NewsPage() {
                     <CardHeader>
                       <div className="flex items-center text-sm text-muted-foreground mb-2">
                         <Calendar className="mr-2 h-4 w-4" />
-                        <span>{new Date(article.date).toLocaleDateString("fr-FR")}</span>
+                        <span>{article.createdAt.toLocaleDateString("fr-FR")}</span>
                         <span className="mx-2">•</span>
                         <span>Par {article.author}</span>
                       </div>

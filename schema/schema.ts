@@ -128,3 +128,37 @@ export const members = pgTable("member", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 })
+
+export const events = pgTable("event", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
+  time: text("time").notNull(),
+  location: text("location").notNull(),
+  image: text("image"),
+  category: text("category").notNull(),
+  attendees: integer("attendees").notNull().default(0),
+  upcoming: boolean("upcoming").notNull().default(true),
+  images: text("images"), // JSON string of image array for archived events
+  report: text("report"), // For archived events
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+})
+
+export const news = pgTable("news", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  title: text("title").notNull(),
+  excerpt: text("excerpt").notNull(),
+  content: text("content").notNull(),
+  image: text("image"),
+  category: text("category").notNull(),
+  author: text("author").notNull(),
+  published: boolean("published").notNull().default(true),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+})

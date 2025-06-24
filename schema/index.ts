@@ -49,3 +49,53 @@ export const ResetPasswordSchema = zod.object({
 })
 
 export type ResetPasswordSchemaType = zod.infer<typeof ResetPasswordSchema>
+
+export const EventSchema = zod.object({
+  title: zod.string().min(3, {
+    message: 'Title must be at least 3 characters long',
+  }),
+  description: zod.string().min(10, {
+    message: 'Description must be at least 10 characters long',
+  }),
+  date: zod.string().min(1, {
+    message: 'Date is required',
+  }),
+  time: zod.string().min(1, {
+    message: 'Time is required',
+  }),
+  location: zod.string().min(3, {
+    message: 'Location must be at least 3 characters long',
+  }),
+  image: zod.string().optional(),
+  category: zod.string().min(1, {
+    message: 'Category is required',
+  }),
+  attendees: zod.number().min(0),
+  upcoming: zod.boolean(),
+  images: zod.string().optional(), // JSON string for archived events
+  report: zod.string().optional(), // For archived events
+})
+
+export type EventSchemaType = zod.infer<typeof EventSchema>
+
+export const NewsSchema = zod.object({
+  title: zod.string().min(3, {
+    message: 'Title must be at least 3 characters long',
+  }),
+  excerpt: zod.string().min(10, {
+    message: 'Excerpt must be at least 10 characters long',
+  }),
+  content: zod.string().min(50, {
+    message: 'Content must be at least 50 characters long',
+  }),
+  image: zod.string().optional(),
+  category: zod.string().min(1, {
+    message: 'Category is required',
+  }),
+  author: zod.string().min(1, {
+    message: 'Author is required',
+  }),
+  published: zod.boolean(),
+})
+
+export type NewsSchemaType = zod.infer<typeof NewsSchema>
