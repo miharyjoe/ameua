@@ -6,7 +6,13 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 )
 
 export async function GET() {
@@ -24,6 +30,12 @@ export async function POST(request: NextRequest) {
     // Parse form data
     const formData = await request.formData()
     
+    // Debug: Log all received FormData entries
+    console.log('Received FormData entries:')
+    for (const [key, value] of formData.entries()) {
+      console.log(key, value instanceof File ? `File: ${value.name} (${value.size} bytes)` : value)
+    }
+    
     // Extract form fields
     const title = formData.get('title') as string
     const description = formData.get('description') as string
@@ -39,6 +51,13 @@ export async function POST(request: NextRequest) {
     // Handle file upload (if provided)
     const imageFile = formData.get('image') as File | null
     let imageUrl = null
+
+    console.log('Image file check:', { 
+      hasImageFile: !!imageFile, 
+      fileName: imageFile?.name, 
+      fileSize: imageFile?.size,
+      fileType: imageFile?.type 
+    })
 
     if (imageFile && imageFile.size > 0) {
       // Generate unique filename
@@ -63,12 +82,15 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      console.log('Upload successful:', uploadData)
+
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('ameuafile')
         .getPublicUrl(fileName)
       
       imageUrl = publicUrl
+      console.log('Generated public URL:', imageUrl)
     }
 
     // Validate required fields
@@ -95,8 +117,11 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     }
     
+    console.log('Event data to be saved:', { ...eventData, image: imageUrl ? 'URL_SET' : 'NULL' })
+    
     const newEvent = await db.insert(events).values(eventData).returning()
     
+    console.log('Event created successfully:', newEvent[0].id)
     return NextResponse.json(newEvent[0], { status: 201 })
   } catch (error) {
     console.error("Error creating event:", error)

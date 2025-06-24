@@ -2,25 +2,14 @@
 
 import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowLeft, Save, Calendar, MapPin, Users, Image, Tag, Upload, X, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { EventSchema, type EventSchemaType } from "@/schema"
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
 
 interface EditEventProps {
   params: Promise<{ id: string }>
@@ -35,22 +24,22 @@ export default function EditEvent({ params }: EditEventProps) {
   const [deleteImage, setDeleteImage] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  const form = useForm<EventSchemaType>({
-    resolver: zodResolver(EventSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      date: "",
-      time: "",
-      location: "",
-      image: "",
-      category: "",
-      attendees: 0,
-      upcoming: true,
-      images: "",
-      report: "",
-    },
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    location: "",
+    category: "",
+    attendees: 0,
+    upcoming: true,
+    images: "",
+    report: "",
   })
+
+  const handleInputChange = (field: string, value: string | number | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
 
   useEffect(() => {
     fetchEvent()
@@ -64,13 +53,12 @@ export default function EditEvent({ params }: EditEventProps) {
         // Convert date to string format for input
         const dateString = new Date(event.date).toISOString().split('T')[0]
         
-        form.reset({
+        setFormData({
           title: event.title,
           description: event.description,
           date: dateString,
           time: event.time,
           location: event.location,
-          image: event.image || "",
           category: event.category,
           attendees: event.attendees,
           upcoming: event.upcoming,
@@ -108,29 +96,30 @@ export default function EditEvent({ params }: EditEventProps) {
     setFilePreview(null)
   }
 
-  const onSubmit = async (data: EventSchemaType) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setIsSubmitting(true)
     try {
-      const formData = new FormData()
+      const formDataToSend = new FormData()
       
       // Add all form fields
-      Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value.toString())
+      Object.entries(formData).forEach(([key, value]) => {
+        formDataToSend.append(key, value.toString())
       })
 
       // Add file if selected
       if (selectedFile) {
-        formData.append('image', selectedFile)
+        formDataToSend.append('image', selectedFile)
       }
       
       // Add delete image flag
       if (deleteImage) {
-        formData.append('deleteImage', 'true')
+        formDataToSend.append('deleteImage', 'true')
       }
 
       const response = await fetch(`/api/events/${id}`, {
         method: 'PUT',
-        body: formData,
+        body: formDataToSend,
       })
 
       if (!response.ok) {
@@ -179,311 +168,242 @@ export default function EditEvent({ params }: EditEventProps) {
       <section className="py-8">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
-                      Informations générales
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <FormField
-                      control={form.control}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Informations générales
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label htmlFor="title">Titre de l'événement</Label>
+                    <Input
+                      id="title"
                       name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Titre de l'événement</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Conférence Innovation & Leadership" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      value={formData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
                     />
+                  </div>
 
-                    <FormField
-                      control={form.control}
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
                       name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Décrivez votre événement..."
-                              className="min-h-[100px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      value={formData.description}
+                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      className="min-h-[100px]"
                     />
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="date">Date</Label>
+                      <Input
+                        id="date"
                         name="date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Date</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="time"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Heure</FormLabel>
-                            <FormControl>
-                              <Input type="time" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                        type="date"
+                        value={formData.date}
+                        onChange={(e) => handleInputChange('date', e.target.value)}
                       />
                     </div>
 
-                    <FormField
-                      control={form.control}
+                    <div>
+                      <Label htmlFor="time">Heure</Label>
+                      <Input
+                        id="time"
+                        name="time"
+                        type="time"
+                        value={formData.time}
+                        onChange={(e) => handleInputChange('time', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="location">Lieu</Label>
+                    <Input
+                      id="location"
                       name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            Lieu
-                          </FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Auditorium Central, Paris" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      value={formData.location}
+                      onChange={(e) => handleInputChange('location', e.target.value)}
                     />
+                  </div>
 
-                    <FormField
-                      control={form.control}
+                  <div>
+                    <Label htmlFor="category">Catégories</Label>
+                    <Input
+                      id="category"
                       name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Tag className="h-4 w-4" />
-                            Catégories
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Ex: Conférence, Networking, Innovation (séparées par des virgules)"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Saisissez les catégories séparées par des virgules
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      value={formData.category}
+                      onChange={(e) => handleInputChange('category', e.target.value)}
                     />
+                  </div>
 
-                    <FormField
-                      control={form.control}
+                  <div>
+                    <Label htmlFor="attendees">Nombre de participants</Label>
+                    <Input
+                      id="attendees"
                       name="attendees"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Nombre de participants
-                          </FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="0"
-                              placeholder="0"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      type="number"
+                      min="0"
+                      value={formData.attendees}
+                      onChange={(e) => handleInputChange('attendees', Number(e.target.value))}
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Image className="h-5 w-5" />
-                      Image de l'événement
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {filePreview && !deleteImage && (
-                      <div className="flex flex-col items-center space-y-3 p-4 bg-muted/50 rounded-2xl">
-                        <img
-                          src={filePreview}
-                          alt="Aperçu"
-                          className="w-32 h-32 object-cover rounded-2xl"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => document.getElementById('file-upload')?.click()}
-                            className="rounded-xl"
-                          >
-                            Changer l'image
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={handleDeleteImage}
-                            className="rounded-xl"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Supprimer
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {deleteImage && (
-                      <div className="flex flex-col items-center space-y-3 p-4 bg-red-50 rounded-2xl border border-red-200">
-                        <div className="w-32 h-32 bg-red-100 rounded-2xl flex items-center justify-center">
-                          <Trash2 className="h-8 w-8 text-red-500" />
-                        </div>
-                        <p className="text-sm text-red-600 font-medium">
-                          Image marquée pour suppression
-                        </p>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Image className="h-5 w-5" />
+                    Image de l'événement
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {filePreview && !deleteImage && (
+                    <div className="flex flex-col items-center space-y-3 p-4 bg-muted/50 rounded-2xl">
+                      <img
+                        src={filePreview}
+                        alt="Aperçu"
+                        className="w-32 h-32 object-cover rounded-2xl"
+                      />
+                      <div className="flex gap-2">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            setDeleteImage(false)
-                            // Restore original image if it exists
-                            const originalImage = form.getValues('image')
-                            if (originalImage) {
-                              setFilePreview(originalImage)
-                            }
-                          }}
-                          className="rounded-xl"
-                        >
-                          Annuler la suppression
-                        </Button>
-                      </div>
-                    )}
-                    
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-8 text-center">
-                      <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground mb-4">
-                        Glissez-déposez votre photo ou cliquez pour sélectionner
-                      </p>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="file-upload"
-                      />
-                      <div className="space-y-2">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          className="rounded-xl"
                           onClick={() => document.getElementById('file-upload')?.click()}
+                          className="rounded-xl"
                         >
-                          {filePreview && !deleteImage ? 'Changer l\'image' : 'Ajouter une image'}
+                          Changer l'image
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleDeleteImage}
+                          className="rounded-xl"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Supprimer
                         </Button>
                       </div>
-                      
-                      {selectedFile && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Nouveau fichier: {selectedFile.name}
-                        </p>
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Statut et informations supplémentaires</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="upcoming"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Événement à venir
-                            </FormLabel>
-                            <FormDescription>
-                              Décochez si l'événement est archivé
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
+                  {deleteImage && (
+                    <div className="flex flex-col items-center space-y-3 p-4 bg-red-50 rounded-2xl border border-red-200">
+                      <div className="w-32 h-32 bg-red-100 rounded-2xl flex items-center justify-center">
+                        <Trash2 className="h-8 w-8 text-red-500" />
+                      </div>
+                      <p className="text-sm text-red-600 font-medium">
+                        Image marquée pour suppression
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setDeleteImage(false)
+                          // Restore original image if it exists from the fetched event data
+                          if (filePreview) {
+                            // The filePreview was set from the original event image
+                            // No need to do anything as filePreview will show again
+                          }
+                        }}
+                        className="rounded-xl"
+                      >
+                        Annuler la suppression
+                      </Button>
+                    </div>
+                  )}
+                  
+                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-8 text-center">
+                    <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">
+                      Glissez-déposez votre photo ou cliquez pour sélectionner
+                    </p>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="file-upload"
                     />
-
-                    <FormField
-                      control={form.control}
-                      name="report"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Compte-rendu (pour les événements archivés)</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Rédigez un compte-rendu de l'événement..."
-                              className="min-h-[100px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Ce champ est optionnel et s'affiche pour les événements archivés
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                <div className="flex gap-4">
-                  <Button type="submit" disabled={isSubmitting} className="flex-1">
-                    {isSubmitting ? (
-                      "Mise à jour en cours..."
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Mettre à jour l'événement
-                      </>
+                    <div className="space-y-2">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="rounded-xl"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                      >
+                        {filePreview && !deleteImage ? 'Changer l\'image' : 'Ajouter une image'}
+                      </Button>
+                    </div>
+                    
+                    {selectedFile && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Nouveau fichier: {selectedFile.name}
+                      </p>
                     )}
-                  </Button>
-                  <Button type="button" variant="outline" asChild>
-                    <Link href="/admin/events">
-                      Annuler
-                    </Link>
-                  </Button>
-                </div>
-              </form>
-            </Form>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Statut et informations supplémentaires</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex flex-row items-start space-x-3 space-y-0">
+                    <Checkbox
+                      id="upcoming"
+                      name="upcoming"
+                      checked={formData.upcoming}
+                      onCheckedChange={(value) => handleInputChange('upcoming', value)}
+                    />
+                    <div className="space-y-1 leading-none">
+                      <Label htmlFor="upcoming">
+                        Événement à venir
+                      </Label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="report">Compte-rendu (pour les événements archivés)</Label>
+                    <Textarea
+                      id="report"
+                      name="report"
+                      value={formData.report}
+                      onChange={(e) => handleInputChange('report', e.target.value)}
+                      className="min-h-[100px]"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex gap-4">
+                <Button type="submit" disabled={isSubmitting} className="flex-1">
+                  {isSubmitting ? (
+                    "Mise à jour en cours..."
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Mettre à jour l'événement
+                    </>
+                  )}
+                </Button>
+                <Button type="button" variant="outline" asChild>
+                  <Link href="/admin/events">
+                    Annuler
+                  </Link>
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       </section>

@@ -116,8 +116,6 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      console.log('Upload successful:', uploadData)
-
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('ameuafile')

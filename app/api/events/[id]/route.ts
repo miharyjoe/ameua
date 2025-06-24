@@ -7,7 +7,13 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 )
 
 export async function GET(
@@ -75,9 +81,8 @@ export async function PUT(
         }
       }
       imageUrl = null // Set to null to remove from database
-    }
-    // Handle new image upload
-    else if (imageFile && imageFile.size > 0) {
+    } else if (imageFile && imageFile.size > 0) {
+      // Handle new image upload
       // Generate unique filename
       const fileExtension = imageFile.name.split('.').pop()
       const fileName = `event-${id}-${Date.now()}.${fileExtension}`
