@@ -2,52 +2,163 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { UserPlus, Upload, Check } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { UserPlus, Upload, Check, AlertCircle, Facebook, Linkedin, User } from "lucide-react"
+import { MemberStatus } from "@/types/member"
 
 export default function RegisterPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
-    promo: "",
+    promotion: "",
     currentRole: "",
     company: "",
     location: "",
     linkedin: "",
+    facebook: "",
     bio: "",
-    expertise: [],
+    expertise: "",
     acceptTerms: false,
     acceptNewsletter: false,
   })
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [memberStatus, setMemberStatus] = useState<MemberStatus | null>(null)
+
+  // Check authentication and member status
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/sign-in?callbackUrl=/members/register')
+    } else if (status === 'authenticated') {
+      // Pre-fill email from session
+      setFormData(prev => ({
+        ...prev,
+        email: session.user?.email || ''
+      }))
+      
+      // Check if user is already a member
+      fetch('/api/members/register')
+        .then(res => res.json())
+        .then(data => {
+          setMemberStatus(data)
+        })
+        .catch(console.error)
+    }
+  }, [status, session, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setError(null)
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      const formDataToSend = new FormData()
+      
+      // Add all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'expertise') {
+          // Convert comma-separated string to JSON array
+          const expertiseArray = value.toString().split(',').map(item => item.trim()).filter(item => item)
+          formDataToSend.append(key, JSON.stringify(expertiseArray))
+        } else {
+          formDataToSend.append(key, value.toString())
+        }
+      })
 
-    setIsSubmitting(false)
-    setIsSubmitted(true)
+      // Add file if selected
+      if (selectedFile) {
+        formDataToSend.append('profileImage', selectedFile)
+      }
+
+      const response = await fetch('/api/members/register', {
+        method: 'POST',
+        body: formDataToSend,
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setIsSubmitted(true)
+      } else {
+        setError(result.error || 'An error occurred')
+      }
+    } catch (error) {
+      console.error('Registration error:', error)
+      setError('Network error. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      // Create preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setFilePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Loading state
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // Already a member
+  if (memberStatus?.isMember) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="max-w-md mx-auto shadow-2xl rounded-2xl border-0">
+          <CardContent className="text-center p-8 space-y-6">
+            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
+              <User className="h-8 w-8 text-blue-600" />
+            </div>
+            <div className="space-y-2">
+              <Button className="w-full rounded-xl" asChild>
+                <a href="/members">Voir l'annuaire</a>
+              </Button>
+              <Button variant="outline" className="w-full rounded-xl" asChild>
+                <a href="/">Retour à l'accueil</a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Success state
   if (isSubmitted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
@@ -59,12 +170,17 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-green-800">Inscription réussie !</h2>
               <p className="text-muted-foreground">
-                Votre demande d'inscription a été envoyée avec succès. Vous recevrez un email de confirmation sous peu.
+                Votre inscription a été enregistrée avec succès. Vous êtes maintenant membre de notre communauté !
               </p>
             </div>
-            <Button className="w-full rounded-xl" asChild>
-              <a href="/">Retour à l'accueil</a>
-            </Button>
+            <div className="space-y-2">
+              <Button className="w-full rounded-xl" asChild>
+                <a href="/members">Voir l'annuaire</a>
+              </Button>
+              <Button variant="outline" className="w-full rounded-xl" asChild>
+                <a href="/">Retour à l'accueil</a>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -89,6 +205,16 @@ export default function RegisterPage() {
               Remplissez ce formulaire pour devenir membre de notre association d'anciens étudiants
             </p>
           </div>
+
+          {/* Error Alert */}
+          {error && (
+            <Alert className="mb-6 border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
+                {error}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Registration Form */}
           <Card className="shadow-2xl rounded-2xl border-0 bg-white">
@@ -135,6 +261,7 @@ export default function RegisterPage() {
                         onChange={(e) => handleInputChange("email", e.target.value)}
                         className="rounded-xl"
                         required
+                        readOnly
                       />
                     </div>
                     <div className="space-y-2">
@@ -155,25 +282,18 @@ export default function RegisterPage() {
                   <h3 className="text-lg font-semibold border-b pb-2">Informations académiques</h3>
 
                   <div className="space-y-2">
-                    <Label htmlFor="promo">Promotion *</Label>
-                    <Select value={formData.promo} onValueChange={(value) => handleInputChange("promo", value)}>
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Sélectionnez votre promotion" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2024">Promotion 2024</SelectItem>
-                        <SelectItem value="2023">Promotion 2023</SelectItem>
-                        <SelectItem value="2022">Promotion 2022</SelectItem>
-                        <SelectItem value="2021">Promotion 2021</SelectItem>
-                        <SelectItem value="2020">Promotion 2020</SelectItem>
-                        <SelectItem value="2019">Promotion 2019</SelectItem>
-                        <SelectItem value="2018">Promotion 2018</SelectItem>
-                        <SelectItem value="2017">Promotion 2017</SelectItem>
-                        <SelectItem value="2016">Promotion 2016</SelectItem>
-                        <SelectItem value="2015">Promotion 2015</SelectItem>
-                        <SelectItem value="autre">Autre (préciser dans la bio)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="promotion">Promotion *</Label>
+                    <Input
+                      id="promotion"
+                      type="number"
+                      min="1990"
+                      max="2030"
+                      value={formData.promotion}
+                      onChange={(e) => handleInputChange("promotion", e.target.value)}
+                      className="rounded-xl"
+                      placeholder="ex: 2015"
+                      required
+                    />
                   </div>
                 </div>
 
@@ -206,26 +326,48 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Localisation *</Label>
+                    <Input
+                      id="location"
+                      value={formData.location}
+                      onChange={(e) => handleInputChange("location", e.target.value)}
+                      className="rounded-xl"
+                      placeholder="ex: Paris, France"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Social Links */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Réseaux sociaux</h3>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="location">Localisation *</Label>
-                      <Input
-                        id="location"
-                        value={formData.location}
-                        onChange={(e) => handleInputChange("location", e.target.value)}
-                        className="rounded-xl"
-                        placeholder="ex: Paris, France"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="linkedin">Profil LinkedIn</Label>
+                      <Label htmlFor="linkedin" className="flex items-center">
+                        <Linkedin className="mr-2 h-4 w-4" />
+                        Profil LinkedIn
+                      </Label>
                       <Input
                         id="linkedin"
                         value={formData.linkedin}
                         onChange={(e) => handleInputChange("linkedin", e.target.value)}
                         className="rounded-xl"
                         placeholder="https://linkedin.com/in/..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="facebook" className="flex items-center">
+                        <Facebook className="mr-2 h-4 w-4" />
+                        Profil Facebook
+                      </Label>
+                      <Input
+                        id="facebook"
+                        value={formData.facebook}
+                        onChange={(e) => handleInputChange("facebook", e.target.value)}
+                        className="rounded-xl"
+                        placeholder="https://facebook.com/..."
                       />
                     </div>
                   </div>
@@ -245,20 +387,63 @@ export default function RegisterPage() {
                       placeholder="Parlez-nous de votre parcours, vos projets, vos centres d'intérêt..."
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="expertise">Domaines d'expertise</Label>
+                    <Input
+                      id="expertise"
+                      value={formData.expertise}
+                      onChange={(e) => handleInputChange("expertise", e.target.value)}
+                      className="rounded-xl"
+                      placeholder="ex: Développement web, Intelligence artificielle, Marketing digital"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Séparez vos domaines d'expertise par des virgules
+                    </p>
+                  </div>
                 </div>
 
                 {/* Photo Upload */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Photo de profil</h3>
 
-                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-8 text-center">
-                    <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">
-                      Glissez-déposez votre photo ou cliquez pour sélectionner
-                    </p>
-                    <Button type="button" variant="outline" className="rounded-xl">
-                      Choisir une photo
-                    </Button>
+                  <div className="space-y-4">
+                    {filePreview && (
+                      <div className="flex justify-center">
+                        <img 
+                          src={filePreview} 
+                          alt="Preview" 
+                          className="w-32 h-32 object-cover rounded-2xl"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-8 text-center">
+                      <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-4">
+                        Glissez-déposez votre photo ou cliquez pour sélectionner
+                      </p>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="rounded-xl"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                      >
+                        Choisir une photo
+                      </Button>
+                      {selectedFile && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Fichier sélectionné: {selectedFile.name}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 

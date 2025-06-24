@@ -83,24 +83,48 @@ import {
   )
    
   export const authenticators = pgTable(
-    "authenticator",
+  "authenticator",
+  {
+    credentialID: text("credentialID").notNull().unique(),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    providerAccountId: text("providerAccountId").notNull(),
+    credentialPublicKey: text("credentialPublicKey").notNull(),
+    counter: integer("counter").notNull(),
+    credentialDeviceType: text("credentialDeviceType").notNull(),
+    credentialBackedUp: boolean("credentialBackedUp").notNull(),
+    transports: text("transports"),
+  },
+  (authenticator) => [
     {
-      credentialID: text("credentialID").notNull().unique(),
-      userId: text("userId")
-        .notNull()
-        .references(() => users.id, { onDelete: "cascade" }),
-      providerAccountId: text("providerAccountId").notNull(),
-      credentialPublicKey: text("credentialPublicKey").notNull(),
-      counter: integer("counter").notNull(),
-      credentialDeviceType: text("credentialDeviceType").notNull(),
-      credentialBackedUp: boolean("credentialBackedUp").notNull(),
-      transports: text("transports"),
+      compositePK: primaryKey({
+        columns: [authenticator.userId, authenticator.credentialID],
+      }),
     },
-    (authenticator) => [
-      {
-        compositePK: primaryKey({
-          columns: [authenticator.userId, authenticator.credentialID],
-        }),
-      },
-    ]
-  )
+  ]
+)
+
+export const members = pgTable("member", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  firstName: text("firstName").notNull(),
+  lastName: text("lastName").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  promotion: integer("promotion").notNull(),
+  currentRole: text("currentRole").notNull(),
+  company: text("company").notNull(),
+  location: text("location").notNull(),
+  linkedin: text("linkedin"),
+  facebook: text("facebook"),
+  bio: text("bio"),
+  profileImage: text("profileImage"),
+  expertise: text("expertise"), // JSON string of expertise array
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+})

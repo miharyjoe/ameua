@@ -78,10 +78,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    // Session callback to add user id to session
-    session({ session, user }) {
-      if (user && session.user) {
-        session.user.id = user.id
+    // JWT callback to add user id to token
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    // Session callback to add user id to session from token
+    session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string
       }
       return session
     },
