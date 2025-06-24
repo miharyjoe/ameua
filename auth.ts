@@ -1,55 +1,105 @@
-import NextAuth from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { prisma } from "@/prisma"
+import NextAuth, { CredentialsSignin } from "next-auth"
 import Credentials from 'next-auth/providers/credentials'
 import { SignInSchema } from './schema'
 import bcrypt from 'bcrypt'
+import { db, users } from "./schema/schema"
+import { DrizzleAdapter } from "@auth/drizzle-adapter"
+import { eq } from "drizzle-orm"
+
+// Custom error for better error handling
+class InvalidLoginError extends CredentialsSignin {
+  code = "Invalid email or password"
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: DrizzleAdapter(db),
   session: {
     strategy: "jwt",
   },
   providers: [
     Credentials({
+      // The name to display on the sign in form
+      name: "credentials",
+      // The credentials object defines the input fields
       credentials: {
-        email: {},
-        password: {},
+        email: { 
+          label: "Email", 
+          type: "email", 
+          placeholder: "user@example.com" 
+        },
+        password: { 
+          label: "Password", 
+          type: "password",
+          placeholder: "••••••••" 
+        },
       },
       authorize: async (credentials) => {
-        const { email, password } = await SignInSchema.parseAsync(credentials)
+        try {
+          // Validate credentials using Zod schema
+          const { email, password } = await SignInSchema.parseAsync(credentials)
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email,
-          },
-        })
+          // Query user from database
+          const userResult = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1)
 
-        if (!user) {
-          throw new Error('No user found')
-        }
+          // Check if user exists
+          if (!userResult || userResult.length === 0) {
+            throw new InvalidLoginError()
+          }
 
-        const isValid = bcrypt.compareSync(password, user.password!)
+          const user = userResult[0]
 
-        if (!isValid) {
-          throw new Error('Invalid password')
-        }
+          // Verify password
+          const isPasswordValid = await bcrypt.compare(password, user.password)
 
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
+          if (!isPasswordValid) {
+            throw new InvalidLoginError()
+          }
+
+          // Return user object (don't include password)
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          }
+        } catch (error) {
+          // Handle validation errors and authentication errors
+          if (error instanceof InvalidLoginError) {
+            throw error
+          }
+          // For any other error (including Zod validation), throw generic error
+          throw new InvalidLoginError()
         }
       },
     }),
   ],
   callbacks: {
-    session({ session, token }) {
-      if (token.sub && session.user) {
-        session.user.id = token.sub
+    // Session callback to add user id to session
+    session({ session, user }) {
+      if (user && session.user) {
+        session.user.id = user.id
       }
       return session
+    },
+  },
+  pages: {
+    signIn: '/auth/sign-in',
+    error: '/auth/error',
+  },
+  // Security configuration
+  cookies: {
+    sessionToken: {
+      name: `authjs.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
     },
   },
 })
