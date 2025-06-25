@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Calendar, Newspaper, Users, BarChart3, Plus, Settings, Shield, UserCheck } from "lucide-react"
+import { Calendar, Newspaper, Users, BarChart3, Plus, Settings, Shield, UserCheck, Target } from "lucide-react"
 import Link from "next/link"
 
 interface AdminStats {
@@ -23,6 +23,11 @@ interface AdminStats {
   news: {
     published: number
     drafts: number
+    total: number
+  }
+  projects: {
+    current: number
+    finished: number
     total: number
   }
   lastUpdated: string
@@ -148,6 +153,12 @@ export default function AdminDashboard() {
                   Nouvelle Actualité
                 </Link>
               </Button>
+              <Button variant="outline" asChild>
+                <Link href="/admin/projects/create">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nouveau Projet
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -156,10 +167,10 @@ export default function AdminDashboard() {
       {/* Stats Overview */}
       <section className="py-8">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
             {loading && !stats ? (
               // Show skeletons during initial load
-              Array.from({ length: 5 }).map((_, i) => (
+              Array.from({ length: 6 }).map((_, i) => (
                 <StatCardSkeleton key={i} />
               ))
             ) : (
@@ -269,15 +280,38 @@ export default function AdminDashboard() {
                     )}
                   </CardContent>
                 </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Projets en cours</CardTitle>
+                    <Target className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {stats ? (
+                      <>
+                        <div className="text-2xl font-bold">{stats.projects?.current || 0}</div>
+                        <p className="text-xs text-muted-foreground">
+                          {stats.projects?.total ? `${stats.projects.total} projets au total` : 'Aucun projet'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Skeleton className="h-8 w-[60px] mb-2" />
+                        <Skeleton className="h-3 w-[120px]" />
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
               </>
             )}
           </div>
 
           {/* Management Tabs */}
           <Tabs defaultValue="events" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
               <TabsTrigger value="events">Gestion des Événements</TabsTrigger>
               <TabsTrigger value="news">Gestion des Actualités</TabsTrigger>
+              <TabsTrigger value="projects">Gestion des Projets</TabsTrigger>
               <TabsTrigger value="users">Gestion des Utilisateurs</TabsTrigger>
             </TabsList>
 
@@ -404,6 +438,72 @@ export default function AdminDashboard() {
                           <Link href="/admin/news/create">
                             <Plus className="mr-2 h-4 w-4" />
                             Créer une actualité
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="projects">
+              {loading && !stats ? (
+                <TabContentSkeleton />
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Projets récents</CardTitle>
+                    <CardDescription>Gérez vos projets en cours et terminés</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <Card className="border-l-4 border-l-green-500">
+                        <CardContent className="pt-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">En cours</p>
+                              {stats ? (
+                                <p className="text-2xl font-bold">{stats.projects?.current || 0}</p>
+                              ) : (
+                                <Skeleton className="h-8 w-[60px]" />
+                              )}
+                            </div>
+                            <Target className="h-8 w-8 text-green-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="border-l-4 border-l-blue-500">
+                        <CardContent className="pt-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Terminés</p>
+                              {stats ? (
+                                <p className="text-2xl font-bold">{stats.projects?.finished || 0}</p>
+                              ) : (
+                                <Skeleton className="h-8 w-[60px]" />
+                              )}
+                            </div>
+                            <BarChart3 className="h-8 w-8 text-blue-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-medium">Actions rapides</h3>
+                      <div className="flex gap-2">
+                        <Button variant="outline" asChild>
+                          <Link href="/admin/projects">
+                            <Target className="mr-2 h-4 w-4" />
+                            Voir tous les projets
+                          </Link>
+                        </Button>
+                        <Button asChild>
+                          <Link href="/admin/projects/create">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Créer un projet
                           </Link>
                         </Button>
                       </div>

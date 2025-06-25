@@ -107,3 +107,29 @@ export const NewsSchema = zod.object({
 })
 
 export type NewsSchemaType = zod.infer<typeof NewsSchema>
+
+export const ProjectSchema = zod.object({
+  title: zod.string().min(3, {
+    message: 'Title must be at least 3 characters long',
+  }),
+  description: zod.string().min(10, {
+    message: 'Description must be at least 10 characters long',
+  }),
+  category: zod.string().min(1, {
+    message: 'Category is required',
+  }),
+  goal: zod.number().min(1, {
+    message: 'Goal must be greater than 0',
+  }),
+  raised: zod.number().min(0).optional(),
+  contributors: zod.number().min(0).optional(),
+  deadline: zod.string().optional(),
+  image: zod.string().optional(),
+  impact: zod.string().optional(),
+  needs: zod.string().optional(), // JSON string
+  isFinished: zod.boolean(),
+  testimonial: zod.string().optional(), // JSON string
+  totalRaised: zod.number().min(0).optional(),
+})
+
+export type ProjectSchemaType = zod.infer<typeof ProjectSchema>

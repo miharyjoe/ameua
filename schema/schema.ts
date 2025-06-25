@@ -163,3 +163,24 @@ export const news = pgTable("news", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 })
+
+export const projects = pgTable("project", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(),
+  goal: integer("goal").notNull(),
+  raised: integer("raised").notNull().default(0),
+  contributors: integer("contributors").notNull().default(0),
+  deadline: timestamp("deadline", { mode: "date" }),
+  image: text("image"),
+  impact: text("impact"),
+  needs: text("needs"), // JSON string of needs array
+  isFinished: boolean("isFinished").notNull().default(false),
+  testimonial: text("testimonial"), // JSON string for finished projects
+  totalRaised: integer("totalRaised"), // For finished projects
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+})

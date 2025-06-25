@@ -1,82 +1,32 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Target, Heart, Users, TrendingUp, DollarSign, Clock, CheckCircle, ArrowRight } from "lucide-react"
 
-const currentProjects = [
-  {
-    id: 1,
-    title: "Bourses d'Excellence Étudiantes",
-    description: "Programme de bourses pour soutenir les étudiants méritants en difficulté financière.",
-    category: "Éducation",
-    goal: 50000,
-    raised: 32000,
-    contributors: 45,
-    deadline: "2024-06-30",
-    image: "https://placehold.co/200x300",
-    impact: "15 bourses attribuées cette année",
-    needs: ["Financement", "Bénévoles pour sélection"],
-  },
-  {
-    id: 2,
-    title: "Incubateur Alumni Startups",
-    description: "Accompagnement des projets entrepreneuriaux portés par nos diplômés.",
-    category: "Entrepreneuriat",
-    goal: 100000,
-    raised: 75000,
-    contributors: 28,
-    deadline: "2024-12-31",
-    image: "https://placehold.co/200x300",
-    impact: "8 startups accompagnées, 3 levées de fonds",
-    needs: ["Mentors expérimentés", "Financement", "Espaces de coworking"],
-  },
-  {
-    id: 3,
-    title: "Rénovation Laboratoire Recherche",
-    description: "Modernisation des équipements du laboratoire de recherche de l'université.",
-    category: "Infrastructure",
-    goal: 80000,
-    raised: 45000,
-    contributors: 62,
-    deadline: "2024-09-15",
-    image: "https://placehold.co/200x300",
-    impact: "Bénéficiera à 200+ étudiants chercheurs",
-    needs: ["Équipements scientifiques", "Financement", "Expertise technique"],
-  },
-]
-
-const successStories = [
-  {
-    id: 1,
-    title: "Centre de Formation Numérique",
-    description: "Formation aux métiers du numérique pour 500 jeunes défavorisés.",
-    completed: "2023",
-    totalRaised: 120000,
-    contributors: 89,
-    impact: "500 jeunes formés, 85% d'insertion professionnelle",
-    image: "https://placehold.co/200x300",
-    testimonial: {
-      text: "Ce projet a transformé ma vie. Grâce à cette formation, j'ai trouvé un emploi dans le développement web.",
-      author: "Karim, bénéficiaire",
-    },
-  },
-  {
-    id: 2,
-    title: "Bibliothèque Numérique Africaine",
-    description: "Création d'une bibliothèque numérique pour les universités africaines partenaires.",
-    completed: "2022",
-    totalRaised: 85000,
-    contributors: 156,
-    impact: "50,000 étudiants ont accès à 10,000 ressources",
-    image: "https://placehold.co/200x300",
-    testimonial: {
-      text: "Un projet qui a révolutionné l'accès à l'information dans notre université.",
-      author: "Dr. Amina Kone, Université de Bamako",
-    },
-  },
-]
+interface Project {
+  id: string
+  title: string
+  description: string
+  category: string
+  goal: number
+  raised: number
+  contributors: number
+  deadline: Date | null
+  image: string | null
+  impact: string | null
+  needs: string | null
+  isFinished: boolean
+  testimonial: string | null
+  totalRaised: number | null
+  createdAt: Date
+  updatedAt: Date
+}
 
 const impactStats = [
   { label: "Projets réalisés", value: "25+", icon: CheckCircle },
@@ -85,7 +35,86 @@ const impactStats = [
   { label: "Contributeurs", value: "500+", icon: Heart },
 ]
 
+// Loading skeleton component
+const ProjectCardSkeleton = () => (
+  <Card className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
+    <div className="relative">
+      <Skeleton className="w-full h-48" />
+      <div className="absolute top-4 left-4">
+        <Skeleton className="h-6 w-20" />
+      </div>
+    </div>
+    <CardHeader>
+      <Skeleton className="h-6 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-2/3" />
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-12" />
+        </div>
+        <Skeleton className="h-2 w-full" />
+        <div className="flex justify-between">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-32" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+      <Skeleton className="h-20 w-full" />
+      <div className="flex gap-2">
+        <Skeleton className="h-6 w-16" />
+        <Skeleton className="h-6 w-20" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </CardContent>
+  </Card>
+)
+
 export default function ProjectsPage() {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch('/api/projects')
+      if (!response.ok) {
+        throw new Error('Failed to fetch projects')
+      }
+      const data = await response.json()
+      
+      // Convert date strings to Date objects
+      const projectsWithDates = data.map((project: any) => ({
+        ...project,
+        deadline: project.deadline ? new Date(project.deadline) : null,
+        createdAt: new Date(project.createdAt),
+        updatedAt: new Date(project.updatedAt),
+      }))
+      
+      setProjects(projectsWithDates)
+    } catch (error) {
+      console.error("Error fetching projects:", error)
+      setError("Erreur lors du chargement des projets")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const currentProjects = projects.filter(project => !project.isFinished)
+  const successStories = projects.filter(project => project.isFinished)
+
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -133,10 +162,10 @@ export default function ProjectsPage() {
           <Tabs defaultValue="current" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8 rounded-2xl">
               <TabsTrigger value="current" className="rounded-xl">
-                Projets Actuels
+                Projets Actuels ({currentProjects.length})
               </TabsTrigger>
               <TabsTrigger value="success" className="rounded-xl">
-                Réussites
+                Réussites ({successStories.length})
               </TabsTrigger>
             </TabsList>
 
@@ -148,14 +177,44 @@ export default function ProjectsPage() {
                 </p>
               </div>
 
+              {error ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <p className="text-red-600 mb-4">{error}</p>
+                    <Button onClick={fetchProjects} variant="outline">
+                      Réessayer
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : loading ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <ProjectCardSkeleton key={index} />
+                  ))}
+                </div>
+              ) : currentProjects.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Aucun projet en cours</h3>
+                    <p className="text-muted-foreground">
+                      Nouveaux projets à venir bientôt
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                {currentProjects.map((project) => (
+                  {currentProjects.map((project) => {
+                    const needs = project.needs ? JSON.parse(project.needs) : []
+                    
+                    return (
                   <Card key={project.id} className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
                     <div className="relative">
                       <img
                         src={project.image || "/placeholder.svg"}
                         alt={project.title}
                         className="w-full h-48 object-cover"
+                            loading="lazy"
                       />
                       <Badge className="absolute top-4 left-4">{project.category}</Badge>
                     </div>
@@ -188,16 +247,22 @@ export default function ProjectsPage() {
                         <div className="space-y-1">
                           <div className="text-2xl font-bold text-primary">
                             <Clock className="h-5 w-5 inline mr-1" />
-                            {Math.ceil(
-                              (new Date(project.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
-                            )}
-                            j
+                                {project.deadline 
+                                  ? Math.max(0, Math.ceil(
+                                      (project.deadline.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
+                                    ))
+                                  : "∞"
+                                }
+                                {project.deadline ? "j" : ""}
                           </div>
-                          <div className="text-xs text-muted-foreground">Restants</div>
+                              <div className="text-xs text-muted-foreground">
+                                {project.deadline ? "Restants" : "Pas de limite"}
+                              </div>
                         </div>
                       </div>
 
                       {/* Impact */}
+                          {project.impact && (
                       <div className="bg-green-50 p-4 rounded-xl">
                         <h4 className="font-semibold text-green-800 mb-2 flex items-center">
                           <TrendingUp className="h-4 w-4 mr-2" />
@@ -205,18 +270,26 @@ export default function ProjectsPage() {
                         </h4>
                         <p className="text-sm text-green-700">{project.impact}</p>
                       </div>
+                          )}
 
                       {/* Needs */}
+                          {needs.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="font-semibold text-sm">Besoins actuels:</h4>
                         <div className="flex flex-wrap gap-1">
-                          {project.needs.map((need, index) => (
+                                {needs.slice(0, 3).map((need: string, index: number) => (
                             <Badge key={index} variant="outline" className="text-xs">
                               {need}
                             </Badge>
                           ))}
+                                {needs.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{needs.length - 3}
+                                  </Badge>
+                                )}
                         </div>
                       </div>
+                          )}
 
                       {/* Actions */}
                       <div className="grid grid-cols-2 gap-2">
@@ -231,8 +304,10 @@ export default function ProjectsPage() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                    )
+                  })}
               </div>
+              )}
 
               {/* Call to Action */}
               <Card className="shadow-lg rounded-2xl border-0 bg-gradient-to-r from-primary to-blue-600 text-primary-foreground">
@@ -257,8 +332,43 @@ export default function ProjectsPage() {
                 </p>
               </div>
 
+              {loading ? (
+                <div className="space-y-8">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <Card key={index} className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Skeleton className="w-full h-[300px]" />
+                        <div className="p-6 space-y-4">
+                          <Skeleton className="h-8 w-3/4" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                          <div className="grid grid-cols-2 gap-4">
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                          </div>
+                          <Skeleton className="h-20 w-full" />
+                          <Skeleton className="h-16 w-full" />
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : successStories.length === 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <CheckCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Aucun projet terminé</h3>
+                    <p className="text-muted-foreground">
+                      Les projets terminés apparaîtront ici
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
               <div className="space-y-8">
-                {successStories.map((story) => (
+                  {successStories.map((story) => {
+                    const testimonial = story.testimonial ? JSON.parse(story.testimonial) : null
+                    
+                    return (
                   <Card key={story.id} className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="relative">
@@ -266,8 +376,12 @@ export default function ProjectsPage() {
                           src={story.image || "/placeholder.svg"}
                           alt={story.title}
                           className="w-full h-full object-cover min-h-[300px]"
+                              loading="lazy"
                         />
-                        <Badge className="absolute top-4 left-4 bg-green-600">Terminé en {story.completed}</Badge>
+                            <Badge className="absolute top-4 left-4 bg-green-600">
+                              <CheckCircle className="mr-1 h-3 w-3" />
+                              Terminé
+                            </Badge>
                       </div>
                       <div className="p-6 space-y-6">
                         <div className="space-y-4">
@@ -279,7 +393,7 @@ export default function ProjectsPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="text-center p-4 bg-green-50 rounded-xl">
                             <div className="text-2xl font-bold text-green-600">
-                              {story.totalRaised.toLocaleString()}€
+                                  {(story.totalRaised || story.raised).toLocaleString()}€
                             </div>
                             <div className="text-sm text-green-700">Fonds levés</div>
                           </div>
@@ -290,6 +404,7 @@ export default function ProjectsPage() {
                         </div>
 
                         {/* Impact */}
+                            {story.impact && (
                         <div className="bg-muted/50 p-4 rounded-xl">
                           <h4 className="font-semibold mb-2 flex items-center">
                             <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
@@ -297,17 +412,22 @@ export default function ProjectsPage() {
                           </h4>
                           <p className="text-sm text-muted-foreground">{story.impact}</p>
                         </div>
+                            )}
 
                         {/* Testimonial */}
+                            {testimonial && (
                         <div className="border-l-4 border-primary pl-4">
-                          <p className="italic text-muted-foreground mb-2">"{story.testimonial.text}"</p>
-                          <p className="text-sm font-medium">— {story.testimonial.author}</p>
+                                <p className="italic text-muted-foreground mb-2">"{testimonial.text}"</p>
+                                <p className="text-sm font-medium">— {testimonial.author}</p>
                         </div>
+                            )}
                       </div>
                     </div>
                   </Card>
-                ))}
+                    )
+                  })}
               </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
