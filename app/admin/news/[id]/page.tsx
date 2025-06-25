@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -45,7 +45,7 @@ interface NewsViewProps {
 }
 
 export default function NewsView({ params }: NewsViewProps) {
-  const { id } = use(params)
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
   const router = useRouter()
   const [article, setArticle] = useState<NewsArticle | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,13 +54,26 @@ export default function NewsView({ params }: NewsViewProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isToggling, setIsToggling] = useState(false)
 
+  // Resolve params on component mount
   useEffect(() => {
-    fetchArticle()
-  }, [id])
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
+    }
+    resolveParams()
+  }, [params])
+
+  useEffect(() => {
+    if (resolvedParams?.id) {
+      fetchArticle()
+    }
+  }, [resolvedParams])
 
   const fetchArticle = async () => {
+    if (!resolvedParams?.id) return
+    
     try {
-      const response = await fetch(`/api/news/${id}`)
+      const response = await fetch(`/api/news/${resolvedParams.id}`)
       if (response.ok) {
         const articleData = await response.json()
         setArticle({
@@ -77,9 +90,11 @@ export default function NewsView({ params }: NewsViewProps) {
   }
 
   const handleDelete = async () => {
+    if (!resolvedParams?.id) return
+    
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/news/${id}`, {
+      const response = await fetch(`/api/news/${resolvedParams.id}`, {
         method: 'DELETE',
       })
 
@@ -98,7 +113,7 @@ export default function NewsView({ params }: NewsViewProps) {
   }
 
   const handleTogglePublish = async () => {
-    if (!article) return
+    if (!article || !resolvedParams?.id) return
     
     setIsToggling(true)
     try {
@@ -112,7 +127,7 @@ export default function NewsView({ params }: NewsViewProps) {
       formData.append('author', article.author)
       formData.append('published', (!article.published).toString()) // Toggle published status
       
-      const response = await fetch(`/api/news/${id}`, {
+      const response = await fetch(`/api/news/${resolvedParams.id}`, {
         method: 'PUT',
         body: formData,
       })
@@ -131,7 +146,7 @@ export default function NewsView({ params }: NewsViewProps) {
     }
   }
 
-  if (loading) {
+  if (loading || !resolvedParams) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -188,14 +203,14 @@ export default function NewsView({ params }: NewsViewProps) {
             <div className="flex gap-2">
               {article.published && (
                 <Button variant="outline" asChild>
-                  <Link href={`/news/${id}`} target="_blank">
+                  <Link href={`/news/${resolvedParams.id}`} target="_blank">
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Voir public
                   </Link>
                 </Button>
               )}
               <Button variant="outline" asChild>
-                <Link href={`/admin/news/${id}/edit`}>
+                <Link href={`/admin/news/${resolvedParams.id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
                   Modifier
                 </Link>
@@ -317,7 +332,7 @@ export default function NewsView({ params }: NewsViewProps) {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <Button variant="outline" className="w-full justify-start" asChild>
-                    <Link href={`/admin/news/${id}/edit`}>
+                    <Link href={`/admin/news/${resolvedParams.id}/edit`}>
                       <Edit className="mr-2 h-4 w-4" />
                       Modifier l'article
                     </Link>
@@ -325,7 +340,7 @@ export default function NewsView({ params }: NewsViewProps) {
                   
                   {article.published && (
                     <Button variant="outline" className="w-full justify-start" asChild>
-                      <Link href={`/news/${id}`} target="_blank">
+                      <Link href={`/news/${resolvedParams.id}`} target="_blank">
                         <ExternalLink className="mr-2 h-4 w-4" />
                         Voir la version publique
                       </Link>

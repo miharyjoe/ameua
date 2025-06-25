@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,7 @@ interface EditEventProps {
 }
 
 export default function EditEvent({ params }: EditEventProps) {
-  const { id } = use(params)
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -37,17 +37,30 @@ export default function EditEvent({ params }: EditEventProps) {
     report: "",
   })
 
+  // Resolve params on component mount
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
+    }
+    resolveParams()
+  }, [params])
+
   const handleInputChange = (field: string, value: string | number | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   useEffect(() => {
-    fetchEvent()
-  }, [id])
+    if (resolvedParams?.id) {
+      fetchEvent()
+    }
+  }, [resolvedParams])
 
   const fetchEvent = async () => {
+    if (!resolvedParams?.id) return
+    
     try {
-      const response = await fetch(`/api/events/${id}`)
+      const response = await fetch(`/api/events/${resolvedParams.id}`)
       if (response.ok) {
         const event = await response.json()
         // Convert date to string format for input
@@ -98,6 +111,8 @@ export default function EditEvent({ params }: EditEventProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!resolvedParams?.id) return
+    
     setIsSubmitting(true)
     try {
       const formDataToSend = new FormData()
@@ -117,7 +132,7 @@ export default function EditEvent({ params }: EditEventProps) {
         formDataToSend.append('deleteImage', 'true')
       }
 
-      const response = await fetch(`/api/events/${id}`, {
+      const response = await fetch(`/api/events/${resolvedParams.id}`, {
         method: 'PUT',
         body: formDataToSend,
       })
@@ -135,7 +150,7 @@ export default function EditEvent({ params }: EditEventProps) {
     }
   }
 
-  if (loading) {
+  if (loading || !resolvedParams) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

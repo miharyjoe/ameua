@@ -7,7 +7,6 @@ import { db } from "@/schema/schema"
 import { news } from "@/schema/schema"
 import { eq } from "drizzle-orm"
 import { notFound } from "next/navigation"
-import { use } from "react"
 
 interface NewsDetailProps {
   params: Promise<{ id: string }>
@@ -47,7 +46,10 @@ async function getRelatedNews(currentId: string, category: string) {
 }
 
 export default async function NewsDetail({ params }: NewsDetailProps) {
-  const { id } = use(params)
+  // Properly await the params Promise - this is the fix for React 19 + Next.js 15
+  const resolvedParams = await params
+  const { id } = resolvedParams
+  
   const article = await getNewsArticle(id)
   
   if (!article) {

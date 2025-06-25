@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -52,7 +52,7 @@ interface EventViewProps {
 }
 
 export default function EventView({ params }: EventViewProps) {
-  const { id } = use(params)
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
   const router = useRouter()
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
@@ -61,13 +61,26 @@ export default function EventView({ params }: EventViewProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isArchiving, setIsArchiving] = useState(false)
 
+  // Resolve params on component mount
   useEffect(() => {
-    fetchEvent()
-  }, [id])
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
+    }
+    resolveParams()
+  }, [params])
+
+  useEffect(() => {
+    if (resolvedParams?.id) {
+      fetchEvent()
+    }
+  }, [resolvedParams])
 
   const fetchEvent = async () => {
+    if (!resolvedParams?.id) return
+    
     try {
-      const response = await fetch(`/api/events/${id}`)
+      const response = await fetch(`/api/events/${resolvedParams.id}`)
       if (response.ok) {
         const eventData = await response.json()
         setEvent({
@@ -85,9 +98,11 @@ export default function EventView({ params }: EventViewProps) {
   }
 
   const handleDelete = async () => {
+    if (!resolvedParams?.id) return
+    
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/events/${id}`, {
+      const response = await fetch(`/api/events/${resolvedParams.id}`, {
         method: 'DELETE',
       })
 
@@ -106,14 +121,14 @@ export default function EventView({ params }: EventViewProps) {
   }
 
   const handleArchive = async () => {
-    if (!event) return
+    if (!event || !resolvedParams?.id) return
     
     setIsArchiving(true)
     try {
       const formData = new FormData()
       formData.append('upcoming', (!event.upcoming).toString())
       
-      const response = await fetch(`/api/events/${id}`, {
+      const response = await fetch(`/api/events/${resolvedParams.id}`, {
         method: 'PUT',
         body: formData,
       })
@@ -132,7 +147,7 @@ export default function EventView({ params }: EventViewProps) {
     }
   }
 
-  if (loading) {
+  if (loading || !resolvedParams) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -192,7 +207,7 @@ export default function EventView({ params }: EventViewProps) {
             
             <div className="flex gap-2">
               <Button variant="outline" asChild>
-                <Link href={`/admin/events/${id}/edit`}>
+                <Link href={`/admin/events/${resolvedParams.id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
                   Modifier
                 </Link>
@@ -344,7 +359,7 @@ export default function EventView({ params }: EventViewProps) {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <Button variant="outline" className="w-full justify-start" asChild>
-                    <Link href={`/admin/events/${id}/edit`}>
+                    <Link href={`/admin/events/${resolvedParams.id}/edit`}>
                       <Edit className="mr-2 h-4 w-4" />
                       Modifier l'événement
                     </Link>
