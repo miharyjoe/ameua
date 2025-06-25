@@ -71,4 +71,92 @@ export async function sendPasswordResetEmail(email: string, resetToken: string) 
     console.error('Error sending email:', error)
     return { success: false, error }
   }
+}
+
+export async function sendContactEmail({
+  firstName,
+  lastName,
+  email,
+  promotion,
+  subject,
+  message
+}: {
+  firstName: string
+  lastName: string
+  email: string
+  promotion?: string
+  subject: string
+  message: string
+}) {
+  const mailOptions = {
+    from: process.env.FROM_EMAIL || 'noreply@ameua.mg',
+    to: 'info@ameua.mg',
+    replyTo: email,
+    subject: `Contact - ${subject}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h2 style="color: white; margin: 0;">Nouveau message de contact</h2>
+          <p style="color: #e0e7ff; margin: 10px 0 0 0;">Site web AMEUA</p>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 20px; border: 1px solid #e2e8f0;">
+          <h3 style="color: #1e293b; margin-top: 0;">Informations du contact</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold; color: #475569; width: 120px;">Nom :</td>
+              <td style="padding: 8px 0; color: #1e293b;">${firstName} ${lastName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold; color: #475569;">Email :</td>
+              <td style="padding: 8px 0; color: #1e293b;">
+                <a href="mailto:${email}" style="color: #2563eb; text-decoration: none;">${email}</a>
+              </td>
+            </tr>
+            ${promotion ? `
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold; color: #475569;">Promotion :</td>
+              <td style="padding: 8px 0; color: #1e293b;">${promotion}</td>
+            </tr>
+            ` : ''}
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold; color: #475569;">Sujet :</td>
+              <td style="padding: 8px 0; color: #1e293b;">${subject}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div style="background: white; padding: 20px; border: 1px solid #e2e8f0; border-top: none;">
+          <h3 style="color: #1e293b; margin-top: 0;">Message</h3>
+          <div style="background: #f1f5f9; padding: 15px; border-radius: 5px; border-left: 4px solid #2563eb;">
+            <p style="color: #334155; line-height: 1.6; margin: 0; white-space: pre-wrap;">${message}</p>
+          </div>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 15px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 10px 10px; text-align: center;">
+          <p style="color: #64748b; font-size: 12px; margin: 0;">
+            Message reçu le ${new Date().toLocaleDateString('fr-FR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </p>
+          <p style="color: #64748b; font-size: 12px; margin: 5px 0 0 0;">
+            AMEUA - Association des Alumni en Management, Économie et Université d'Antananarivo
+          </p>
+        </div>
+      </div>
+    `,
+  }
+
+  try {
+    await transporter.sendMail(mailOptions)
+    return { success: true }
+  } catch (error) {
+    console.error('Error sending contact email:', error)
+    return { success: false, error }
+  }
 } 

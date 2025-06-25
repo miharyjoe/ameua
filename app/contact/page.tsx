@@ -1,9 +1,13 @@
+"use client"
+
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   Mail, 
   Phone, 
@@ -14,11 +18,90 @@ import {
   Users,
   Send,
   Clock,
-  Globe
+  Globe,
+  CheckCircle,
+  AlertCircle,
+  Loader2
 } from "lucide-react"
 import Link from "next/link"
 
 export default function ContactPage() {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: 'success' | 'error' | null
+    message: string
+  }>({ type: null, message: '' })
+
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    promotion: '',
+    subject: '',
+    message: ''
+  })
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setSubmitStatus({ type: null, message: '' })
+
+    // Basic client-side validation
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.subject || !formData.message) {
+      setSubmitStatus({
+        type: 'error',
+        message: 'Veuillez remplir tous les champs obligatoires'
+      })
+      setIsSubmitting(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setSubmitStatus({
+          type: 'success',
+          message: 'Votre message a été envoyé avec succès ! Nous vous répondrons dans les plus brefs délais.'
+        })
+        // Reset form
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          promotion: '',
+          subject: '',
+          message: ''
+        })
+      } else {
+        setSubmitStatus({
+          type: 'error',
+          message: result.error || 'Une erreur est survenue lors de l\'envoi du message'
+        })
+      }
+    } catch (error) {
+      console.error('Contact form submission error:', error)
+      setSubmitStatus({
+        type: 'error',
+        message: 'Erreur de connexion. Veuillez vérifier votre connexion internet et réessayer.'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -53,6 +136,20 @@ export default function ContactPage() {
                 </p>
               </div>
 
+              {/* Status Alert */}
+              {submitStatus.type && (
+                <Alert className={submitStatus.type === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+                  {submitStatus.type === 'success' ? (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <AlertDescription className={submitStatus.type === 'success' ? 'text-green-800' : 'text-red-800'}>
+                    {submitStatus.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Card className="shadow-lg border-0 bg-white">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -63,47 +160,94 @@ export default function ContactPage() {
                     Tous les champs marqués d'un * sont obligatoires
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="prenom">Prénom *</Label>
-                      <Input id="prenom" placeholder="Votre prénom" required />
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">Prénom *</Label>
+                        <Input 
+                          id="firstName" 
+                          placeholder="Votre prénom" 
+                          value={formData.firstName}
+                          onChange={(e) => handleInputChange('firstName', e.target.value)}
+                          required 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Nom *</Label>
+                        <Input 
+                          id="lastName" 
+                          placeholder="Votre nom" 
+                          value={formData.lastName}
+                          onChange={(e) => handleInputChange('lastName', e.target.value)}
+                          required 
+                        />
+                      </div>
                     </div>
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="nom">Nom *</Label>
-                      <Input id="nom" placeholder="Votre nom" required />
+                      <Label htmlFor="email">Email *</Label>
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="votre.email@exemple.com" 
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        required 
+                      />
                     </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input id="email" type="email" placeholder="votre.email@exemple.com" required />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="promotion">Promotion</Label>
-                    <Input id="promotion" placeholder="Année de diplôme (ex: 2020)" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="sujet">Sujet *</Label>
-                    <Input id="sujet" placeholder="Sujet de votre message" required />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="message">Message *</Label>
-                    <Textarea 
-                      id="message" 
-                      placeholder="Décrivez votre demande en détail..." 
-                      className="min-h-[120px]"
-                      required 
-                    />
-                  </div>
-                  
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                    <Send className="mr-2 h-4 w-4" />
-                    Envoyer le message
-                  </Button>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="promotion">Promotion</Label>
+                      <Input 
+                        id="promotion" 
+                        placeholder="Année de diplôme (ex: 2020)" 
+                        value={formData.promotion}
+                        onChange={(e) => handleInputChange('promotion', e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="subject">Sujet *</Label>
+                      <Input 
+                        id="subject" 
+                        placeholder="Sujet de votre message" 
+                        value={formData.subject}
+                        onChange={(e) => handleInputChange('subject', e.target.value)}
+                        required 
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="message">Message *</Label>
+                      <Textarea 
+                        id="message" 
+                        placeholder="Décrivez votre demande en détail..." 
+                        className="min-h-[120px]"
+                        value={formData.message}
+                        onChange={(e) => handleInputChange('message', e.target.value)}
+                        required 
+                      />
+                    </div>
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Envoi en cours...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Envoyer le message
+                        </>
+                      )}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
             </div>
@@ -131,7 +275,7 @@ export default function ContactPage() {
                     <div>
                       <p className="font-medium">Email de l'association</p>
                       <a 
-                        href="mailto:alumni.economie@univ-antananarivo.mg" 
+                        href="mailto:info@ameua.mg" 
                         className="text-blue-600 hover:text-blue-800 transition-colors"
                       >
                         info@ameua.mg
