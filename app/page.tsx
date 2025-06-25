@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { 
   Users, 
   Target, 
@@ -27,6 +26,10 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { db } from "@/schema/schema"
+import { events, news } from "@/schema/schema"
+import { eq, desc } from "drizzle-orm"
+import { AlumniCarousel, CampusCarousel, PartnersCarousel } from "@/components/home-carousels"
 
 // Alumni Success Stories Data
 const successStories = [
@@ -64,41 +67,32 @@ const successStories = [
   }
 ]
 
-// Recent News Data
-const recentNews = [
-  {
-    type: "Événement",
-    title: "Conférence sur l'Économie Numérique",
-    date: "15 Mars 2024",
-    location: "Amphi 500, Campus Ankatso",
-    description: "Table ronde avec nos alumni leaders du secteur tech et numérique",
-    isUpcoming: true
-  },
-  {
-    type: "Succès",
-    title: "Prix d'Excellence Académique",
-    date: "10 Mars 2024",
-    location: "Université d'Antananarivo",
-    description: "La Mention Économie remporte le prix de la meilleure formation en sciences économiques",
-    isUpcoming: false
-  },
-  {
-    type: "Projet",
-    title: "Lancement du Programme de Mentorat",
-    date: "8 Mars 2024",
-    location: "En ligne",
-    description: "50 alumni expérimentés accompagnent les nouveaux diplômés dans leur insertion professionnelle",
-    isUpcoming: false
-  },
-  {
-    type: "Anniversaire",
-    title: "Préparatifs du 60ème Anniversaire",
-    date: "5 Mars 2024",
-    location: "Comité d'organisation",
-    description: "Formation des équipes pour l'organisation de la grande célébration de décembre 2024",
-    isUpcoming: false
+// Fetch latest events and news from database
+async function getLatestEventsAndNews() {
+  try {
+    // Fetch 2 latest upcoming events
+    const upcomingEvents = await db
+      .select()
+      .from(events)
+      .where(eq(events.upcoming, true))
+      .orderBy(desc(events.date))
+      .limit(2)
+
+    // Fetch 2 latest published news
+    const latestNews = await db
+      .select()
+      .from(news)
+      .where(eq(news.published, true))
+      .orderBy(desc(news.createdAt))
+      .limit(2)
+
+    return { upcomingEvents, latestNews }
+  } catch (error) {
+    console.error("Error fetching latest events and news:", error)
+    // Return empty arrays if database is not available
+    return { upcomingEvents: [], latestNews: [] }
   }
-]
+}
 
 // Quick Actions Data
 const quickActions = [
@@ -127,7 +121,7 @@ const quickActions = [
     title: "Événements à Venir",
     description: "Inscrivez-vous aux prochains événements",
     icon: Calendar,
-    href: "/events",
+    href: "/news",
     color: "from-orange-500 to-orange-600"
   }
 ]
@@ -228,7 +222,9 @@ const partners = [
   }
 ]
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { upcomingEvents, latestNews } = await getLatestEventsAndNews()
+  
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -327,55 +323,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="max-w-6xl mx-auto">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full"
-            >
-              <CarouselContent>
-                {successStories.map((story, index) => (
-                  <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
-                    <Card className="h-full shadow-lg border-0 bg-white overflow-hidden">
-                      <CardHeader className="text-center">
-                        <div className="relative w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden">
-                          <Image
-                            src={story.image}
-                            alt={story.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <CardTitle className="text-xl text-blue-900">{story.name}</CardTitle>
-                        <Badge variant="secondary" className="w-fit mx-auto">
-                          {story.promotion}
-                        </Badge>
-                        <p className="text-sm font-medium text-primary">{story.role}</p>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="relative">
-                          <Quote className="absolute -top-2 -left-2 h-6 w-6 text-blue-200" />
-                          <p className="text-sm text-gray-600 italic pl-4">
-                            "{story.quote}"
-                          </p>
-                        </div>
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                          <p className="text-xs text-blue-800 font-medium">
-                            <Award className="inline h-4 w-4 mr-1" />
-                            {story.achievement}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="hidden md:flex -left-12" />
-              <CarouselNext className="hidden md:flex -right-12" />
-            </Carousel>
-          </div>
+          <AlumniCarousel successStories={successStories} />
         </div>
       </section>
 
@@ -466,40 +414,181 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {recentNews.map((news, index) => (
-              <Card key={index} className="shadow-lg border-0 bg-white hover:shadow-xl transition-shadow duration-300">
+            {/* Display upcoming events */}
+            {upcomingEvents.map((event) => (
+              <Card key={`event-${event.id}`} className="shadow-lg border-0 bg-white hover:shadow-xl transition-shadow duration-300">
                 <CardHeader>
                   <div className="flex items-center justify-between mb-2">
-                    <Badge variant={news.isUpcoming ? "default" : "secondary"}>
-                      {news.type}
+                    <Badge variant="default">
+                      Événement
                     </Badge>
-                    {news.isUpcoming && (
-                      <Badge variant="outline" className="text-green-700 border-green-500">
-                        À venir
-                      </Badge>
-                    )}
+                    <Badge variant="outline" className="text-green-700 border-green-500">
+                      À venir
+                    </Badge>
                   </div>
-                  <CardTitle className="text-xl text-blue-900">{news.title}</CardTitle>
+                  <CardTitle className="text-xl text-blue-900">{event.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    {news.date}
+                    {event.date.toLocaleDateString("fr-FR", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })} à {event.time}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4" />
-                    {news.location}
+                    {event.location}
                   </div>
-                  <p className="text-gray-700">{news.description}</p>
-                  {news.isUpcoming && (
-                    <Button size="sm" className="w-full">
+                  <p className="text-gray-700">{event.description}</p>
+                  <Button size="sm" className="w-full" asChild>
+                    <Link href="/news#events">
                       <ExternalLink className="mr-2 h-4 w-4" />
                       En savoir plus
-                    </Button>
-                  )}
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             ))}
+
+            {/* Display latest news */}
+            {latestNews.map((article) => (
+              <Card key={`news-${article.id}`} className="shadow-lg border-0 bg-white hover:shadow-xl transition-shadow duration-300">
+                <CardHeader>
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="secondary">
+                      Actualité
+                    </Badge>
+                    <Badge variant="outline" className="text-blue-700 border-blue-500">
+                      {article.category}
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-xl text-blue-900">{article.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    {article.createdAt.toLocaleDateString("fr-FR", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    Par {article.author}
+                  </div>
+                  <p className="text-gray-700">{article.excerpt}</p>
+                  <Button size="sm" variant="outline" className="w-full" asChild>
+                    <Link href={`/news/${article.id}`}>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Lire l'article
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+
+            {/* Enhanced Empty State */}
+            {upcomingEvents.length === 0 && latestNews.length === 0 && (
+              <div className="col-span-1 md:col-span-2">
+                <Card className="text-center py-16 px-8 shadow-lg border-0 bg-gradient-to-br from-blue-50 to-indigo-50">
+                  <CardContent className="space-y-6">
+                    {/* Animated Icon */}
+                    <div className="relative mx-auto w-24 h-24 mb-6">
+                      <div className="absolute inset-0 bg-blue-100 rounded-full animate-pulse"></div>
+                      <div className="relative flex items-center justify-center w-full h-full">
+                        <Calendar className="h-12 w-12 text-blue-600" />
+                      </div>
+                    </div>
+                    
+                    {/* Main Message */}
+                    <div className="space-y-3">
+                      <h3 className="text-2xl font-bold text-blue-900">
+                        Prochainement...
+                      </h3>
+                      <p className="text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
+                        Nous préparons de nouveaux événements passionnants et des actualités importantes pour notre communauté.
+                      </p>
+                    </div>
+
+                    {/* Call-to-action buttons */}
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                      <Button size="lg" className="rounded-xl shadow-lg" asChild>
+                        <Link href="/members/register">
+                          <Users className="mr-2 h-5 w-5" />
+                          Rejoindre la communauté
+                        </Link>
+                      </Button>
+                      <Button size="lg" variant="outline" className="rounded-xl" asChild>
+                        <Link href="/contact">
+                          <Mail className="mr-2 h-5 w-5" />
+                          Nous contacter
+                        </Link>
+                      </Button>
+                    </div>
+
+                    {/* Newsletter subscription teaser */}
+                    <div className="pt-6 border-t border-blue-200">
+                      <p className="text-sm text-blue-700 mb-3 font-medium">
+                        ✨ Soyez les premiers informés !
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Abonnez-vous à notre newsletter pour recevoir toutes nos actualités et invitations aux événements.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Partial Empty State - Only Events */}
+            {upcomingEvents.length === 0 && latestNews.length > 0 && (
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-xl transition-shadow duration-300">
+                <CardContent className="text-center py-12 px-6 space-y-4">
+                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <Calendar className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-green-900">
+                    Événements à venir
+                  </h3>
+                  <p className="text-sm text-green-700">
+                    Aucun événement programmé pour le moment. De nouveaux événements seront bientôt annoncés !
+                  </p>
+                  <Button size="sm" variant="outline" className="mt-4 border-green-500 text-green-700 hover:bg-green-50" asChild>
+                    <Link href="/news#events">
+                      <Calendar className="mr-2 h-4 w-4" />
+                      Voir les archives
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Partial Empty State - Only News */}
+            {latestNews.length === 0 && upcomingEvents.length > 0 && (
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-50 to-violet-50 hover:shadow-xl transition-shadow duration-300">
+                <CardContent className="text-center py-12 px-6 space-y-4">
+                  <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                    <MessageCircle className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-purple-900">
+                    Actualités récentes
+                  </h3>
+                  <p className="text-sm text-purple-700">
+                    Aucune actualité récente. Restez connectés pour ne rien manquer !
+                  </p>
+                  <Button size="sm" variant="outline" className="mt-4 border-purple-500 text-purple-700 hover:bg-purple-50" asChild>
+                    <Link href="/news#news">
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      Voir toutes les actualités
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="text-center mt-12">
@@ -523,50 +612,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="max-w-5xl mx-auto">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full"
-            >
-              <CarouselContent className="ml-0">
-                {[
-                  { src: "/images/univ1.jpeg", alt: "Campus principal - Vue d'ensemble" },
-                  { src: "/images/univ2.jpeg", alt: "Bibliothèque universitaire" },
-                  { src: "/images/univ3.jpeg", alt: "Amphithéâtre moderne" },
-                  { src: "/images/univ4.jpeg", alt: "Espace étudiant" },
-                  { src: "/images/univ5.jpeg", alt: "Laboratoires de recherche" },
-                  { src: "/images/univ6.jpeg", alt: "Cour intérieure" },
-                ].map((image, index) => (
-                  <CarouselItem key={index} className="pl-0 md:basis-1/2 lg:basis-1/3">
-                    <div className="p-2">
-                      <Card className="overflow-hidden border-0 shadow-lg rounded-2xl bg-white">
-                        <div className="relative aspect-[4/3] overflow-hidden">
-                          <Image
-                            src={image.src}
-                            alt={image.alt}
-                            fill
-                            className="object-cover transition-transform duration-500 hover:scale-105"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            priority={index < 3}
-                          />
-                        </div>
-                        <CardContent className="p-4">
-                          <p className="text-sm text-muted-foreground text-center font-medium">
-                            {image.alt}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="hidden md:flex -left-8 size-10 bg-white/90 backdrop-blur shadow-lg border-2 hover:bg-white" />
-              <CarouselNext className="hidden md:flex -right-8 size-10 bg-white/90 backdrop-blur shadow-lg border-2 hover:bg-white" />
-            </Carousel>
-          </div>
+          <CampusCarousel />
         </div>
       </section>
 
@@ -646,59 +692,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="max-w-6xl mx-auto">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full"
-            >
-              <CarouselContent>
-                {partners.flatMap((category) =>
-                  category.partners.map((partner, partnerIndex) => (
-                    <CarouselItem key={`${category.category}-${partnerIndex}`} className="md:basis-1/2 lg:basis-1/3">
-                      <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white overflow-hidden h-full">
-                        <CardHeader className="pb-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <Badge variant="secondary" className="text-xs">
-                              {partner.type}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {category.category}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg text-blue-900 group-hover:text-blue-700 transition-colors">
-                              {partner.name}
-                            </CardTitle>
-                            {partner.website !== "#" && (
-                              <ExternalLink className="h-4 w-4 text-blue-600 group-hover:text-blue-800 transition-colors" />
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <p className="text-sm text-gray-600 leading-relaxed">
-                            {partner.description}
-                          </p>
-                          {partner.website !== "#" && (
-                            <Button variant="outline" size="sm" className="w-full group-hover:bg-blue-50 transition-colors" asChild>
-                              <Link href={partner.website} target="_blank" rel="noopener noreferrer">
-                                <Globe className="mr-2 h-4 w-4" />
-                                Visiter le site
-                              </Link>
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </CarouselItem>
-                  ))
-                )}
-              </CarouselContent>
-              <CarouselPrevious className="hidden md:flex -left-12 bg-white/90 backdrop-blur shadow-lg border-2 hover:bg-white" />
-              <CarouselNext className="hidden md:flex -right-12 bg-white/90 backdrop-blur shadow-lg border-2 hover:bg-white" />
-            </Carousel>
-          </div>
+          <PartnersCarousel partners={partners} />
 
           <div className="text-center mt-16">
             <Card className="shadow-lg border-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white max-w-4xl mx-auto">
