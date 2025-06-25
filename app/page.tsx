@@ -111,18 +111,18 @@ const quickActions = [
     color: "from-green-500 to-green-600"
   },
   {
-    title: "Mentorat",
-    description: "Trouvez un mentor ou devenez mentor",
-    icon: Users,
-    href: "/mentoring",
-    color: "from-purple-500 to-purple-600"
-  },
-  {
     title: "Événements à Venir",
     description: "Inscrivez-vous aux prochains événements",
     icon: Calendar,
     href: "/news",
     color: "from-orange-500 to-orange-600"
+  },
+  {
+    title: "Projet",
+    description: "Découvrez les projets de l'Alumni",
+    icon: Building,
+    href: "/projects",
+    color: "from-purple-500 to-purple-600"
   }
 ]
 
