@@ -6,11 +6,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertTriangle } from "lucide-react"
 
 interface AuthErrorPageProps {
-  searchParams: { error?: string; code?: string }
+  searchParams: Promise<{ error?: string; code?: string }>
 }
 
-export default function AuthErrorPage({ searchParams }: AuthErrorPageProps) {
-  const { error, code } = searchParams
+export default async function AuthErrorPage({ searchParams }: AuthErrorPageProps) {
+  const { error, code } = await searchParams
 
   const getErrorMessage = (error: string | undefined, code: string | undefined) => {
     switch (error) {
