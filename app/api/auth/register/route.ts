@@ -39,12 +39,14 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         emailVerified: null,
         image: null,
+        role: 'user', // Default role
       })
       .returning({
         id: users.id,
         name: users.name,
         email: users.email,
         image: users.image,
+        role: users.role,
       })
 
     if (!newUser || newUser.length === 0) {

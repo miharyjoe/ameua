@@ -1,6 +1,6 @@
 import NextAuth, { CredentialsSignin } from "next-auth"
 import Credentials from 'next-auth/providers/credentials'
-import { SignInSchema } from './schema'
+import { SignInSchema, UserRoleType } from './schema'
 import bcrypt from 'bcrypt'
 import { db, users } from "./schema/schema"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
@@ -65,6 +65,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: user.name,
             email: user.email,
             image: user.image,
+            role: user.role as UserRoleType,
           }
         } catch (error) {
           // Handle validation errors and authentication errors
@@ -78,17 +79,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    // JWT callback to add user id to token
+    // JWT callback to add user id and role to token
     jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.role = user.role
       }
       return token
     },
-    // Session callback to add user id to session from token
+    // Session callback to add user id and role to session from token
     session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
+        session.user.role = token.role as UserRoleType
       }
       return session
     },

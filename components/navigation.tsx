@@ -31,7 +31,8 @@ import {
   Newspaper,
   FolderOpen,
   Mail,
-  ChevronRight
+  ChevronRight,
+  LayoutDashboard
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -179,6 +180,16 @@ export function Navigation() {
                       <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
                     </Link>
                   </DropdownMenuItem>
+                  {/* Show admin dashboard link only for admin users */}
+                  {session.user?.role === 'admin' && (
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href="/admin" className="flex items-center">
+                        <LayoutDashboard className="mr-3 h-4 w-4 text-purple-600" />
+                        <span>Dashboard Admin</span>
+                        <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="text-red-600 cursor-pointer focus:text-red-700 focus:bg-red-50">
                     <LogOut className="mr-3 h-4 w-4" />
@@ -301,6 +312,16 @@ export function Navigation() {
                           <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
                         </Link>
                       </Button>
+                      {/* Show admin dashboard link only for admin users */}
+                      {session.user?.role === 'admin' && (
+                        <Button variant="ghost" size="sm" className="w-full justify-start h-12 hover:bg-purple-50 hover:text-purple-700 transition-colors" asChild>
+                          <Link href="/admin" onClick={() => setIsOpen(false)}>
+                            <LayoutDashboard className="h-5 w-5 mr-3 text-purple-600" />
+                            <span>Dashboard Admin</span>
+                            <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
+                          </Link>
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="sm" 

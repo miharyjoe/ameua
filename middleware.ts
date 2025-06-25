@@ -9,7 +9,10 @@ const AUTH_PAGES = ['/auth/sign-in', '/auth/sign-up', '/api/auth', '/auth/error'
 // Pages that require authentication (protected pages)
 const PROTECTED_PAGES = ['/members', '/news', '/projects', '/account']
 
-export function middleware(request: NextRequest) {
+// Admin-only pages (we'll handle admin checking in the layout)
+const ADMIN_PAGES = ['/admin']
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
   // Allow API routes and static files
@@ -33,10 +36,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Check if this is a protected page
+  // Check if this is an admin page - just check for authentication, role checking in layout
+  const isAdminPage = ADMIN_PAGES.some(path => pathname.startsWith(path))
   const isProtectedPage = PROTECTED_PAGES.some(path => pathname.startsWith(path))
   
-  if (isProtectedPage) {
+  if (isAdminPage || isProtectedPage) {
     // Check for session cookie (NextAuth sets this)
     const sessionToken = request.cookies.get('authjs.session-token') || 
                         request.cookies.get('__Secure-authjs.session-token')

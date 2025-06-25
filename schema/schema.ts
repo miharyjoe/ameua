@@ -30,6 +30,7 @@ import {
     password: text("password").notNull(),
     emailVerified: timestamp("emailVerified", { mode: "date" }),
     image: text("image"),
+    role: text("role").notNull().default("user"), // "user" or "admin"
   })
    
   export const accounts = pgTable(

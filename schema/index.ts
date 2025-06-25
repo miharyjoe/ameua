@@ -1,5 +1,13 @@
 import * as zod from 'zod'
 
+// User roles enum
+export const UserRole = {
+  USER: 'user',
+  ADMIN: 'admin'
+} as const
+
+export type UserRoleType = typeof UserRole[keyof typeof UserRole]
+
 export const SignInSchema = zod.object({
   email: zod.string().email({
     message: 'Invalid email address',
