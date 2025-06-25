@@ -1,10 +1,64 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Newspaper, Users, BarChart3, Plus, Settings, Shield, UserCheck } from "lucide-react"
 import Link from "next/link"
 
+interface AdminStats {
+  users: {
+    total: number
+    admins: number
+    regular: number
+    members: number
+  }
+  events: {
+    upcoming: number
+    archived: number
+    total: number
+  }
+  news: {
+    published: number
+    drafts: number
+    total: number
+  }
+}
+
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<AdminStats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/admin/stats')
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data)
+      }
+    } catch (error) {
+      console.error("Error fetching admin stats:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">Chargement du dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col">
       {/* Header */}
@@ -43,8 +97,10 @@ export default function AdminDashboard() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">12</div>
-                <p className="text-xs text-muted-foreground">+2 depuis le mois dernier</p>
+                <div className="text-2xl font-bold">{stats?.events.upcoming || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.events.total ? `${stats.events.total} événements au total` : 'Aucun événement'}
+                </p>
               </CardContent>
             </Card>
             
@@ -54,8 +110,8 @@ export default function AdminDashboard() {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">45</div>
-                <p className="text-xs text-muted-foreground">Total des événements passés</p>
+                <div className="text-2xl font-bold">{stats?.events.archived || 0}</div>
+                <p className="text-xs text-muted-foreground">Événements passés</p>
               </CardContent>
             </Card>
 
@@ -65,8 +121,10 @@ export default function AdminDashboard() {
                 <Newspaper className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">28</div>
-                <p className="text-xs text-muted-foreground">+5 ce mois-ci</p>
+                <div className="text-2xl font-bold">{stats?.news.published || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.news.drafts ? `${stats.news.drafts} brouillons` : 'Aucun brouillon'}
+                </p>
               </CardContent>
             </Card>
 
@@ -76,8 +134,10 @@ export default function AdminDashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">156</div>
-                <p className="text-xs text-muted-foreground">Total inscrits</p>
+                <div className="text-2xl font-bold">{stats?.users.total || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.users.admins || 0} admin{(stats?.users.admins || 0) > 1 ? 's' : ''}
+                </p>
               </CardContent>
             </Card>
 
@@ -87,7 +147,7 @@ export default function AdminDashboard() {
                 <UserCheck className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">89</div>
+                <div className="text-2xl font-bold">{stats?.users.members || 0}</div>
                 <p className="text-xs text-muted-foreground">Profils complétés</p>
               </CardContent>
             </Card>
@@ -108,6 +168,32 @@ export default function AdminDashboard() {
                   <CardDescription>Gérez vos événements à venir et archivés</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <Card className="border-l-4 border-l-blue-500">
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">À venir</p>
+                            <p className="text-2xl font-bold">{stats?.events.upcoming || 0}</p>
+                          </div>
+                          <Calendar className="h-8 w-8 text-blue-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="border-l-4 border-l-gray-500">
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Archivés</p>
+                            <p className="text-2xl font-bold">{stats?.events.archived || 0}</p>
+                          </div>
+                          <BarChart3 className="h-8 w-8 text-gray-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-medium">Actions rapides</h3>
                     <div className="flex gap-2">
@@ -136,6 +222,32 @@ export default function AdminDashboard() {
                   <CardDescription>Gérez vos actualités et publications</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <Card className="border-l-4 border-l-green-500">
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Publiées</p>
+                            <p className="text-2xl font-bold">{stats?.news.published || 0}</p>
+                          </div>
+                          <Newspaper className="h-8 w-8 text-green-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="border-l-4 border-l-orange-500">
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Brouillons</p>
+                            <p className="text-2xl font-bold">{stats?.news.drafts || 0}</p>
+                          </div>
+                          <Settings className="h-8 w-8 text-orange-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-medium">Actions rapides</h3>
                     <div className="flex gap-2">
@@ -170,7 +282,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-muted-foreground">Administrateurs</p>
-                            <p className="text-2xl font-bold">3</p>
+                            <p className="text-2xl font-bold">{stats?.users.admins || 0}</p>
                           </div>
                           <Shield className="h-8 w-8 text-purple-500" />
                         </div>
@@ -182,7 +294,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-muted-foreground">Utilisateurs</p>
-                            <p className="text-2xl font-bold">153</p>
+                            <p className="text-2xl font-bold">{stats?.users.regular || 0}</p>
                           </div>
                           <Users className="h-8 w-8 text-blue-500" />
                         </div>
@@ -194,7 +306,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium text-muted-foreground">Membres Alumni</p>
-                            <p className="text-2xl font-bold">89</p>
+                            <p className="text-2xl font-bold">{stats?.users.members || 0}</p>
                           </div>
                           <UserCheck className="h-8 w-8 text-green-500" />
                         </div>
