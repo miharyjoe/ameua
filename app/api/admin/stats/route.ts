@@ -1,9 +1,14 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { db, users, members, events, news } from "@/schema/schema"
-import { eq, count } from "drizzle-orm"
+import { eq, count, max } from "drizzle-orm"
 
-export async function GET() {
+// Cache for stats to avoid unnecessary queries
+let cachedStats: any = null
+let lastCacheTime: Date | null = null
+const CACHE_DURATION = 2 * 60 * 1000 // 2 minutes cache
+
+export async function GET(request: NextRequest) {
   try {
     // Check if user is admin
     const session = await auth()
@@ -11,7 +16,49 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get all statistics in parallel
+    const { searchParams } = new URL(request.url)
+    const lastFetch = searchParams.get('lastFetch')
+
+    // Check if we have fresh cached data
+    const now = new Date()
+    if (cachedStats && lastCacheTime && (now.getTime() - lastCacheTime.getTime()) < CACHE_DURATION) {
+      // If client has the same timestamp, return 304 Not Modified
+      if (lastFetch && lastFetch === cachedStats.lastUpdated) {
+        return new NextResponse(null, { status: 304 })
+      }
+      return NextResponse.json(cachedStats)
+    }
+
+    // Check for data changes since last fetch
+    if (lastFetch) {
+      const lastFetchDate = new Date(lastFetch)
+      
+      // Check if any table has been updated since last fetch
+      const [
+        lastUserUpdate,
+        lastMemberUpdate,
+        lastEventUpdate,
+        lastNewsUpdate
+      ] = await Promise.all([
+        db.select({ lastUpdate: max(users.id) }).from(users), // Using id as a proxy for changes
+        db.select({ lastUpdate: max(members.updatedAt) }).from(members),
+        db.select({ lastUpdate: max(events.updatedAt) }).from(events),
+        db.select({ lastUpdate: max(news.updatedAt) }).from(news)
+      ])
+
+      // If no significant changes detected and we have cached data, return it
+      if (cachedStats) {
+        const hasChanges = [lastMemberUpdate, lastEventUpdate, lastNewsUpdate].some(result => 
+          result[0]?.lastUpdate && result[0].lastUpdate > lastFetchDate
+        )
+        
+        if (!hasChanges) {
+          return new NextResponse(null, { status: 304 })
+        }
+      }
+    }
+
+    // Fetch fresh statistics
     const [
       totalUsers,
       totalAdmins,
@@ -59,8 +106,13 @@ export async function GET() {
         published: publishedNews[0].count,
         drafts: draftNews[0].count,
         total: publishedNews[0].count + draftNews[0].count
-      }
+      },
+      lastUpdated: now.toISOString()
     }
+
+    // Update cache
+    cachedStats = stats
+    lastCacheTime = now
 
     return NextResponse.json(stats)
   } catch (error) {

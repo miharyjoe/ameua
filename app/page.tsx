@@ -306,7 +306,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Alumni Success Stories */}
+      {/* Alumni Success Stories 
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
@@ -326,7 +326,7 @@ export default async function HomePage() {
           <AlumniCarousel successStories={successStories} />
         </div>
       </section>
-
+        */}
       {/* Mission Section */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
