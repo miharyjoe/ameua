@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Save, Calendar, MapPin, Users, Image, Tag, Upload, X, Trash2 } from "lucide-react"
+import { ArrowLeft, Save, Calendar, MapPin, Users, Image, Tag, Upload, X, Trash2, Images } from "lucide-react"
 import Link from "next/link"
 
 interface EditEventProps {
@@ -23,6 +23,12 @@ export default function EditEvent({ params }: EditEventProps) {
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [deleteImage, setDeleteImage] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  // Multiple images state for gallery
+  const [existingGalleryImages, setExistingGalleryImages] = useState<string[]>([])
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([])
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
+  const [deletedGalleryImages, setDeletedGalleryImages] = useState<string[]>([])
 
   const [formData, setFormData] = useState({
     title: "",
@@ -82,6 +88,18 @@ export default function EditEvent({ params }: EditEventProps) {
         if (event.image) {
           setFilePreview(event.image)
         }
+
+        // Parse existing gallery images
+        if (event.images) {
+          try {
+            const parsedImages = JSON.parse(event.images)
+            if (Array.isArray(parsedImages)) {
+              setExistingGalleryImages(parsedImages)
+            }
+          } catch (error) {
+            console.error('Error parsing existing gallery images:', error)
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching event:", error)
@@ -109,6 +127,49 @@ export default function EditEvent({ params }: EditEventProps) {
     setFilePreview(null)
   }
 
+  const handleGalleryFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // Calculate total existing images (existing + new)
+    const totalExisting = existingGalleryImages.length - deletedGalleryImages.length + galleryFiles.length
+    const remainingSlots = 10 - totalExisting
+    const newFiles = files.slice(0, remainingSlots)
+
+    // Create previews
+    const newPreviews: string[] = []
+    let loadedCount = 0
+
+    newFiles.forEach((file, index) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        newPreviews[index] = e.target?.result as string
+        loadedCount++
+        
+        if (loadedCount === newFiles.length) {
+          setGalleryFiles(prev => [...prev, ...newFiles])
+          setGalleryPreviews(prev => [...prev, ...newPreviews])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeExistingGalleryImage = (imageUrl: string) => {
+    setDeletedGalleryImages(prev => [...prev, imageUrl])
+    setExistingGalleryImages(prev => prev.filter(img => img !== imageUrl))
+  }
+
+  const removeNewGalleryImage = (index: number) => {
+    setGalleryFiles(prev => prev.filter((_, i) => i !== index))
+    setGalleryPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const restoreGalleryImage = (imageUrl: string) => {
+    setDeletedGalleryImages(prev => prev.filter(img => img !== imageUrl))
+    setExistingGalleryImages(prev => [...prev, imageUrl])
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!resolvedParams?.id) return
@@ -131,6 +192,25 @@ export default function EditEvent({ params }: EditEventProps) {
       if (deleteImage) {
         formDataToSend.append('deleteImage', 'true')
       }
+
+      // Handle gallery images
+      const finalGalleryImages = [...existingGalleryImages]
+      
+      // Add new gallery images
+      if (galleryFiles.length > 0) {
+        galleryFiles.forEach((file, index) => {
+          formDataToSend.append(`galleryImage_${index}`, file)
+        })
+        formDataToSend.append('galleryImageCount', galleryFiles.length.toString())
+      }
+
+      // Add deleted gallery images list
+      if (deletedGalleryImages.length > 0) {
+        formDataToSend.append('deletedGalleryImages', JSON.stringify(deletedGalleryImages))
+      }
+
+      // Add existing gallery images
+      formDataToSend.append('existingGalleryImages', JSON.stringify(existingGalleryImages))
 
       const response = await fetch(`/api/events/${resolvedParams.id}`, {
         method: 'PUT',
@@ -275,7 +355,7 @@ export default function EditEvent({ params }: EditEventProps) {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Image className="h-5 w-5" />
-                    Image de l'événement
+                    Image principale de l'événement
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -366,6 +446,134 @@ export default function EditEvent({ params }: EditEventProps) {
                       </p>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Multiple Images Gallery */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Images className="h-5 w-5" />
+                    Galerie d'images (Optionnel)
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Gérez la galerie photos de l'événement (max 10 images)
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Existing Images */}
+                  {existingGalleryImages.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-3">Images existantes</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {existingGalleryImages.map((imageUrl, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={imageUrl}
+                              alt={`Galerie existante ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-xl"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => removeExistingGalleryImage(imageUrl)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Deleted Images (with restore option) */}
+                  {deletedGalleryImages.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-3 text-red-600">Images à supprimer</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {deletedGalleryImages.map((imageUrl, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={imageUrl}
+                              alt={`À supprimer ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-xl opacity-50 grayscale"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => restoreGalleryImage(imageUrl)}
+                            >
+                              Restaurer
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Images */}
+                  {galleryPreviews.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-3 text-green-600">Nouvelles images</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {galleryPreviews.map((preview, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={preview}
+                              alt={`Nouvelle ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-xl"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => removeNewGalleryImage(index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Upload Area */}
+                  {(existingGalleryImages.length - deletedGalleryImages.length + galleryFiles.length) < 10 && (
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-6 text-center">
+                      <Images className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-muted-foreground mb-4 text-sm">
+                        Ajouter des images ({existingGalleryImages.length - deletedGalleryImages.length + galleryFiles.length}/10)
+                      </p>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleGalleryFilesChange}
+                        className="hidden"
+                        id="gallery-upload"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        className="rounded-xl"
+                        onClick={() => document.getElementById('gallery-upload')?.click()}
+                      >
+                        Ajouter des images
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {(existingGalleryImages.length - deletedGalleryImages.length + galleryFiles.length) >= 10 && (
+                    <p className="text-sm text-muted-foreground text-center p-4 bg-muted/50 rounded-xl">
+                      Limite de 10 images atteinte
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 

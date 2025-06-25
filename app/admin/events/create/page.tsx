@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Save, Calendar, MapPin, Users, Image, Tag, Upload, X, Trash2 } from "lucide-react"
+import { ArrowLeft, Save, Calendar, MapPin, Users, Image, Tag, Upload, X, Trash2, Images } from "lucide-react"
 import Link from "next/link"
 
 export default function CreateEvent() {
@@ -16,6 +16,10 @@ export default function CreateEvent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
+  
+  // Multiple images state for gallery
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([])
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
     title: "",
@@ -46,6 +50,38 @@ export default function CreateEvent() {
     }
   }
 
+  const handleGalleryFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // Limit to 10 images total
+    const remainingSlots = 10 - galleryFiles.length
+    const newFiles = files.slice(0, remainingSlots)
+
+    // Create previews
+    const newPreviews: string[] = []
+    let loadedCount = 0
+
+    newFiles.forEach((file, index) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        newPreviews[index] = e.target?.result as string
+        loadedCount++
+        
+        if (loadedCount === newFiles.length) {
+          setGalleryFiles(prev => [...prev, ...newFiles])
+          setGalleryPreviews(prev => [...prev, ...newPreviews])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removeGalleryImage = (index: number) => {
+    setGalleryFiles(prev => prev.filter((_, i) => i !== index))
+    setGalleryPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -58,12 +94,19 @@ export default function CreateEvent() {
         formDataToSend.append(key, value.toString())
       })
 
-      // Add file if selected
+      // Add main image if selected
       if (selectedFile) {
-        console.log('Adding image file to FormData:', { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type })
+        console.log('Adding main image file to FormData:', { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type })
         formDataToSend.append('image', selectedFile)
-      } else {
-        console.log('No image file selected')
+      }
+
+      // Add gallery images if selected
+      if (galleryFiles.length > 0) {
+        console.log(`Adding ${galleryFiles.length} gallery images to FormData`)
+        galleryFiles.forEach((file, index) => {
+          formDataToSend.append(`galleryImage_${index}`, file)
+        })
+        formDataToSend.append('galleryImageCount', galleryFiles.length.toString())
       }
 
       // Debug: Log all FormData entries
@@ -227,7 +270,7 @@ export default function CreateEvent() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Image className="h-5 w-5" />
-                    Image de l'événement
+                    Image principale de l'événement
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -286,11 +329,82 @@ export default function CreateEvent() {
                 </CardContent>
               </Card>
 
+              {/* Multiple Images Gallery */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Images className="h-5 w-5" />
+                    Galerie d'images (Optionnel)
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Ajoutez jusqu'à 10 images pour créer une galerie photos de l'événement
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Gallery Previews */}
+                  {galleryPreviews.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {galleryPreviews.map((preview, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={preview}
+                            alt={`Galerie ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-xl"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeGalleryImage(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Upload Area */}
+                  {galleryFiles.length < 10 && (
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-2xl p-6 text-center">
+                      <Images className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-muted-foreground mb-4 text-sm">
+                        Sélectionnez plusieurs images ({galleryFiles.length}/10)
+                      </p>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleGalleryFilesChange}
+                        className="hidden"
+                        id="gallery-upload"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        className="rounded-xl"
+                        onClick={() => document.getElementById('gallery-upload')?.click()}
+                      >
+                        Ajouter des images
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {galleryFiles.length >= 10 && (
+                    <p className="text-sm text-muted-foreground text-center p-4 bg-muted/50 rounded-xl">
+                      Limite de 10 images atteinte
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Statut de l'événement</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="flex flex-row items-start space-x-3 space-y-0">
                     <Checkbox
                       id="upcoming"
@@ -307,6 +421,24 @@ export default function CreateEvent() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Report section - only show when event is archived */}
+                  {!formData.upcoming && (
+                    <div className="space-y-2">
+                      <Label htmlFor="report">Compte-rendu de l'événement</Label>
+                      <Textarea
+                        id="report"
+                        name="report"
+                        value={formData.report}
+                        onChange={(e) => handleInputChange('report', e.target.value)}
+                        placeholder="Rédigez un compte-rendu de l'événement..."
+                        className="min-h-[100px]"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Le compte-rendu sera affiché avec l'événement archivé
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
