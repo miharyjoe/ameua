@@ -4,7 +4,6 @@ import bcrypt from 'bcrypt'
 import { AuthError } from 'next-auth'
 
 import { signIn } from '@/auth'
-import { prisma } from '@/prisma'
 import {
   SignInSchema,
   SignInSchemaType,
@@ -54,28 +53,6 @@ export const userSingUp = async (data: SignUpSchemaType) => {
   const salt = bcrypt.genSaltSync(10)
   const hashedPassword = bcrypt.hashSync(password, salt)
 
-  const user = await prisma.user.findUnique({
-    where: {
-      email,
-    },
-  })
-
-  if (user) {
-    return {
-      error: 'User already exists',
-    }
-  }
-
-  const newUser = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword,
-    },
-    omit: {
-      password: true,
-    },
-  })
 
   await userSignIn({
     email,
