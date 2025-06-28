@@ -5,6 +5,7 @@ import {
     text,
     primaryKey,
     integer,
+    index,
   } from "drizzle-orm/pg-core"
   import postgres from "postgres"
   import { drizzle } from "drizzle-orm/postgres-js"
@@ -13,10 +14,17 @@ import {
   // Supabase connection setup
   const connectionString = process.env.DATABASE_URL!
    
-  // For Supabase, we need to use the pooler for better performance
+  // Optimized connection pool for better performance
   const client = postgres(connectionString, { 
-    max: 1,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    max: 20, // Increase connection pool size
+    idle_timeout: 20, // Close idle connections after 20 seconds
+    connect_timeout: 10, // Fail fast on connection issues
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    // Add connection pooling optimizations
+    prepare: false, // Disable prepared statements for better performance with pooling
+    transform: {
+      undefined: null, // Convert undefined to null for database
+    },
   })
    
   export const db = drizzle(client)
@@ -31,7 +39,12 @@ import {
     emailVerified: timestamp("emailVerified", { mode: "date" }),
     image: text("image"),
     role: text("role").notNull().default("user"), // "user" or "admin"
-  })
+  }, (table) => [
+    // Add index on email for faster login queries
+    index("user_email_idx").on(table.email),
+    // Add index on role for admin checks
+    index("user_role_idx").on(table.role),
+  ])
    
   export const accounts = pgTable(
     "account",
@@ -56,6 +69,8 @@ import {
           columns: [account.provider, account.providerAccountId],
         }),
       },
+      // Add index on userId for faster account lookups
+      index("account_userId_idx").on(account.userId),
     ]
   )
    
@@ -65,7 +80,12 @@ import {
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     expires: timestamp("expires", { mode: "date" }).notNull(),
-  })
+  }, (table) => [
+    // Add index on userId for faster session lookups
+    index("session_userId_idx").on(table.userId),
+    // Add index on expires for cleanup queries
+    index("session_expires_idx").on(table.expires),
+  ])
    
   export const verificationTokens = pgTable(
     "verificationToken",
