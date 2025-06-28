@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
 import { 
   Calendar, 
   MapPin, 
@@ -15,7 +16,8 @@ import {
   Trash2, 
   Archive,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -47,32 +49,89 @@ interface Event {
   updatedAt: Date
 }
 
+// Loading skeleton component
+const EventCardSkeleton = () => (
+  <Card className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Skeleton className="w-full h-48 lg:h-32" />
+      <div className="lg:col-span-2 p-6 space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-4 w-1/4" />
+        </div>
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-18" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+      </div>
+    </div>
+  </Card>
+)
+
 export default function EventsManagement() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [activeTab, setActiveTab] = useState("upcoming")
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchEvents()
   }, [])
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (showRefreshIndicator = false) => {
     try {
+      if (showRefreshIndicator) setRefreshing(true)
+      if (!showRefreshIndicator) setLoading(true)
+      
+      console.log("Fetching events from API...")
       const response = await fetch('/api/events')
-      if (response.ok) {
-        const data = await response.json()
-        // Convert date strings to Date objects
-        const eventsWithDates = data.map((event: any) => ({
-          ...event,
-          date: new Date(event.date),
-          createdAt: new Date(event.createdAt),
-          updatedAt: new Date(event.updatedAt),
-        }))
-        setEvents(eventsWithDates)
+      console.log("API response status:", response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("API response error:", errorText)
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
       }
+      
+      const data = await response.json()
+      console.log("Raw data from API:", data)
+      
+      // Convert date strings to Date objects
+      const eventsWithDates = data.map((event: any) => ({
+        ...event,
+        date: new Date(event.date),
+        createdAt: new Date(event.createdAt),
+        updatedAt: new Date(event.updatedAt),
+      }))
+      
+      console.log("Events with converted dates:", eventsWithDates.length)
+      setEvents(eventsWithDates)
+      setError(null)
     } catch (error) {
-      console.error("Error fetching events:", error)
+      console.error("Detailed error fetching events:", error)
     } finally {
       setLoading(false)
+      if (showRefreshIndicator) setRefreshing(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    fetchEvents(true)
+  }
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    // Refresh data when switching tabs
+    if (value !== activeTab) {
+      fetchEvents(true)
     }
   }
 
@@ -294,13 +353,46 @@ export default function EventsManagement() {
     </Card>
   )
 
-  if (loading) {
+  if (error && events.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-          <p className="mt-4 text-muted-foreground">Chargement des événements...</p>
-        </div>
+      <div className="flex flex-col">
+        <section className="py-8 bg-gradient-to-br from-blue-50 to-indigo-100">
+          <div className="container mx-auto px-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/admin">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Retour au dashboard
+                  </Link>
+                </Button>
+                <div>
+                  <h1 className="text-3xl font-bold">Gestion des Événements</h1>
+                  <p className="text-muted-foreground">Gérez vos événements à venir et archivés</p>
+                </div>
+              </div>
+              <Button asChild>
+                <Link href="/admin/events/create">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nouvel Événement
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-8">
+          <div className="container mx-auto px-4">
+            <div className="text-center space-y-4">
+              <h2 className="text-2xl font-bold text-destructive">Erreur de chargement</h2>
+              <p className="text-muted-foreground">{error}</p>
+              <Button onClick={handleRefresh}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Réessayer
+              </Button>
+            </div>
+          </div>
+        </section>
       </div>
     )
   }
@@ -323,12 +415,22 @@ export default function EventsManagement() {
                 <p className="text-muted-foreground">Gérez vos événements à venir et archivés</p>
               </div>
             </div>
-            <Button asChild>
-              <Link href="/admin/events/create">
-                <Plus className="mr-2 h-4 w-4" />
-                Nouvel Événement
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Actualisation...' : 'Actualiser'}
+              </Button>
+              <Button asChild>
+                <Link href="/admin/events/create">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nouvel Événement
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -336,7 +438,7 @@ export default function EventsManagement() {
       {/* Content */}
       <section className="py-8">
         <div className="container mx-auto px-4">
-          <Tabs defaultValue="upcoming" className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
               <TabsTrigger value="upcoming">
                 Événements à venir ({upcomingEventsList.length})
@@ -347,7 +449,13 @@ export default function EventsManagement() {
             </TabsList>
 
             <TabsContent value="upcoming" className="space-y-6">
-              {upcomingEventsList.length === 0 ? (
+              {loading ? (
+                <div className="space-y-6">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <EventCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : upcomingEventsList.length === 0 ? (
                 <Card className="text-center py-12">
                   <CardContent>
                     <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -371,7 +479,13 @@ export default function EventsManagement() {
             </TabsContent>
 
             <TabsContent value="archived" className="space-y-6">
-              {archivedEventsList.length === 0 ? (
+              {loading ? (
+                <div className="space-y-6">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <EventCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : archivedEventsList.length === 0 ? (
                 <Card className="text-center py-12">
                   <CardContent>
                     <Archive className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -392,4 +506,4 @@ export default function EventsManagement() {
       </section>
     </div>
   )
-} 
+}

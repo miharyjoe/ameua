@@ -20,7 +20,6 @@ export async function GET() {
     const allEvents = await db.select().from(events)
     return NextResponse.json(allEvents)
   } catch (error) {
-    console.error("Error fetching events:", error)
     return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 })
   }
 }

@@ -152,6 +152,47 @@ export async function PUT(
   }
 }
 
+// Add optimized PATCH method for toggle publish
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+    
+    // Validate input
+    if (typeof body.published !== 'boolean') {
+      return NextResponse.json(
+        { error: 'Published field must be a boolean' },
+        { status: 400 }
+      )
+    }
+
+    // Direct update without selecting first - more efficient
+    const updatedArticle = await db
+      .update(news)
+      .set({ 
+        published: body.published,
+        updatedAt: new Date(),
+      })
+      .where(eq(news.id, id))
+      .returning()
+    
+    if (!updatedArticle.length) {
+      return NextResponse.json({ error: "Article not found" }, { status: 404 })
+    }
+    
+    return NextResponse.json({ 
+      success: true, 
+      published: updatedArticle[0].published 
+    })
+  } catch (error) {
+    console.error("Error toggling publish status:", error)
+    return NextResponse.json({ error: "Failed to toggle publish status" }, { status: 500 })
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -5,6 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/components/ui/toast"
+import { measurePerformance, PerformanceMonitor } from "@/lib/performance"
 import { 
   Newspaper, 
   Calendar, 
@@ -14,7 +17,9 @@ import {
   Trash2,
   Eye,
   ArrowLeft,
-  FileText
+  FileText,
+  RefreshCw,
+  X
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -42,77 +47,206 @@ interface NewsArticle {
   updatedAt: Date
 }
 
+interface ApiError extends Error {
+  status: number
+}
+
+class NewsApiClient {
+  private async request<T>(url: string, options: RequestInit = {}): Promise<T> {
+    const endTimer = measurePerformance(`API: ${options.method || 'GET'} ${url}`)
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      })
+
+      if (!response.ok) {
+        const error = new Error(await response.text()) as ApiError
+        error.status = response.status
+        throw error
+      }
+
+      return response.json()
+    } finally {
+      endTimer()
+    }
+  }
+
+  async fetchNews(): Promise<NewsArticle[]> {
+    const endTimer = measurePerformance('NewsApiClient.fetchNews')
+    
+    try {
+      const data = await this.request<any[]>('/api/news')
+      return data.map((article: any) => ({
+        ...article,
+        createdAt: new Date(article.createdAt),
+        updatedAt: new Date(article.updatedAt),
+      }))
+    } finally {
+      endTimer()
+    }
+  }
+
+  async togglePublish(articleId: string, published: boolean): Promise<void> {
+    const endTimer = measurePerformance('NewsApiClient.togglePublish')
+    
+    try {
+      await this.request(`/api/news/${articleId}/toggle-publish`, {
+        method: 'PATCH',
+        body: JSON.stringify({ published }),
+      })
+    } finally {
+      endTimer()
+    }
+  }
+
+  async deleteArticle(articleId: string): Promise<void> {
+    const endTimer = measurePerformance('NewsApiClient.deleteArticle')
+    
+    try {
+      await this.request(`/api/news/${articleId}`, {
+        method: 'DELETE',
+      })
+    } finally {
+      endTimer()
+    }
+  }
+}
+
+const newsApi = new NewsApiClient()
+
+// Loading skeleton component
+const ArticleCardSkeleton = () => (
+  <Card className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Skeleton className="w-full h-48 lg:h-32" />
+      <div className="lg:col-span-2 p-6 space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-4 w-1/3" />
+        </div>
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-18" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+      </div>
+    </div>
+  </Card>
+)
+
 export default function NewsManagement() {
   const [articles, setArticles] = useState<NewsArticle[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [activeTab, setActiveTab] = useState("published")
+  const [error, setError] = useState<string | null>(null)
+  const [operationLoading, setOperationLoading] = useState<{[key: string]: boolean}>({})
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
+  
+  const { toast, ToastContainer } = useToast()
 
   useEffect(() => {
     fetchNews()
   }, [])
 
-  const fetchNews = async () => {
+  const fetchNews = async (showRefreshIndicator = false) => {
     try {
-      const response = await fetch('/api/news')
-      if (response.ok) {
-        const data = await response.json()
-        // Convert date strings to Date objects
-        const articlesWithDates = data.map((article: any) => ({
-          ...article,
-          createdAt: new Date(article.createdAt),
-          updatedAt: new Date(article.updatedAt),
-        }))
-        setArticles(articlesWithDates)
-      }
+      if (showRefreshIndicator) setRefreshing(true)
+      if (!showRefreshIndicator) setLoading(true)
+      
+      const articlesData = await newsApi.fetchNews()
+      setArticles(articlesData)
+      setError(null)
     } catch (error) {
       console.error("Error fetching news:", error)
+      setError("Erreur lors du chargement des actualités")
     } finally {
       setLoading(false)
+      if (showRefreshIndicator) setRefreshing(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    fetchNews(true)
+  }
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    if (articles.length === 0 || error) {
+      fetchNews(true)
     }
   }
 
   const handleTogglePublish = async (articleId: string) => {
+    const article = articles.find(a => a.id === articleId)
+    if (!article) return
+
+    const newPublishedState = !article.published
+    setArticles(prev =>
+      prev.map(a =>
+        a.id === articleId ? { ...a, published: newPublishedState } : a
+      )
+    )
+
+    setOperationLoading(prev => ({ ...prev, [`toggle-${articleId}`]: true }))
+
     try {
-      const article = articles.find(a => a.id === articleId)
-      if (!article) return
-
-      const formData = new FormData()
-      
-      // Add all current article fields
-      formData.append('title', article.title)
-      formData.append('excerpt', article.excerpt)
-      formData.append('content', article.content)
-      formData.append('category', article.category)
-      formData.append('author', article.author)
-      formData.append('published', (!article.published).toString()) // Toggle published status
-
-      const response = await fetch(`/api/news/${articleId}`, {
-        method: 'PUT',
-        body: formData,
+      await newsApi.togglePublish(articleId, newPublishedState)
+      toast({
+        variant: "success",
+        title: "Succès",
+        description: "Statut de publication mis à jour avec succès"
       })
-
-      if (response.ok) {
-        setArticles(prev =>
-          prev.map(article =>
-            article.id === articleId ? { ...article, published: !article.published } : article
-          )
-        )
-      }
     } catch (error) {
+      setArticles(prev =>
+        prev.map(a =>
+          a.id === articleId ? { ...a, published: !newPublishedState } : a
+        )
+      )
       console.error("Error toggling publish status:", error)
+      setError("Erreur lors de la mise à jour du statut de publication")
+      toast({
+        variant: "error",
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour du statut de publication"
+      })
+    } finally {
+      setOperationLoading(prev => ({ ...prev, [`toggle-${articleId}`]: false }))
     }
   }
 
   const handleDeleteArticle = async (articleId: string) => {
-    try {
-      const response = await fetch(`/api/news/${articleId}`, {
-        method: 'DELETE',
-      })
+    setArticles(prev => prev.filter(article => article.id !== articleId))
+    
+    setOperationLoading(prev => ({ ...prev, [`delete-${articleId}`]: true }))
 
-      if (response.ok) {
-        setArticles(prev => prev.filter(article => article.id !== articleId))
-      }
+    try {
+      await newsApi.deleteArticle(articleId)
+      toast({
+        variant: "success",
+        title: "Succès",
+        description: "Article supprimé avec succès"
+      })
     } catch (error) {
+      fetchNews()
       console.error("Error deleting article:", error)
+      setError("Erreur lors de la suppression de l'article")
+      toast({
+        variant: "error",
+        title: "Erreur",
+        description: "Erreur lors de la suppression de l'article"
+      })
+    } finally {
+      setOperationLoading(prev => ({ ...prev, [`delete-${articleId}`]: false }))
     }
   }
 
@@ -174,15 +308,28 @@ export default function NewsManagement() {
               variant="outline" 
               size="sm" 
               onClick={() => handleTogglePublish(article.id)}
+              disabled={operationLoading[`toggle-${article.id}`]}
             >
-              <FileText className="mr-2 h-4 w-4" />
+              {operationLoading[`toggle-${article.id}`] ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="mr-2 h-4 w-4" />
+              )}
               {article.published ? "Dépublier" : "Publier"}
             </Button>
             
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  disabled={operationLoading[`delete-${article.id}`]}
+                >
+                  {operationLoading[`delete-${article.id}`] ? (
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
                   Supprimer
                 </Button>
               </AlertDialogTrigger>
@@ -210,6 +357,48 @@ export default function NewsManagement() {
     </Card>
   )
 
+  // Debug component for development
+  const DebugPanel = () => {
+    const [stats, setStats] = useState<Record<string, any>>({})
+    
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setStats(PerformanceMonitor.getInstance().getStats())
+      }, 1000)
+      
+      return () => clearInterval(interval)
+    }, [])
+
+    if (process.env.NODE_ENV !== 'development' && !showDebugPanel) return null
+
+    return (
+      <div className="fixed bottom-4 left-4 z-50 bg-gray-900 text-white p-4 rounded-lg shadow-lg max-w-md">
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="font-bold text-sm">Performance Stats</h4>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowDebugPanel(false)}
+            className="text-white hover:bg-gray-800"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+        <div className="space-y-1 text-xs">
+          {Object.entries(stats).map(([operation, stat]) => (
+            <div key={operation} className="flex justify-between">
+              <span className="truncate mr-2">{operation}:</span>
+              <span>{stat.latest}ms (avg: {stat.avg}ms)</span>
+            </div>
+          ))}
+          {Object.keys(stats).length === 0 && (
+            <div className="text-gray-400">No metrics yet...</div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -223,6 +412,9 @@ export default function NewsManagement() {
 
   return (
     <div className="flex flex-col">
+      <ToastContainer />
+      <DebugPanel />
+      
       <section className="py-8 bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center">
@@ -238,15 +430,55 @@ export default function NewsManagement() {
                 <p className="text-muted-foreground">Gérez vos articles publiés et brouillons</p>
               </div>
             </div>
-            <Button asChild>
-              <Link href="/admin/news/create">
-                <Plus className="mr-2 h-4 w-4" />
-                Nouvel Article
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              {process.env.NODE_ENV === 'development' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowDebugPanel(!showDebugPanel)}
+                >
+                  Debug
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                {refreshing ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Actualiser
+              </Button>
+              <Button asChild>
+                <Link href="/admin/news/create">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nouvel Article
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Show error banner if there's an error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 mx-4 mt-4 rounded-lg">
+          <div className="flex justify-between items-center">
+            <span>{error}</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setError(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <section className="py-8">
         <div className="container mx-auto px-4">
