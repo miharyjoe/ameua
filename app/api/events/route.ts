@@ -3,6 +3,7 @@ import { db } from "@/schema/schema"
 import { events } from "@/schema/schema"
 import { EventSchema } from "@/schema"
 import { createClient } from '@supabase/supabase-js'
+import { revalidatePath } from 'next/cache'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -167,6 +168,10 @@ export async function POST(request: NextRequest) {
     })
     
     const newEvent = await db.insert(events).values(eventData).returning()
+    
+    // Revalidate home page and news page caches when creating events
+    revalidatePath('/')
+    revalidatePath('/news')
     
     console.log('Event created successfully:', newEvent[0].id)
     return NextResponse.json(newEvent[0], { status: 201 })

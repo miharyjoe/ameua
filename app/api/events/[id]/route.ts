@@ -4,6 +4,7 @@ import { events } from "@/schema/schema"
 import { EventSchema } from "@/schema"
 import { eq } from "drizzle-orm"
 import { createClient } from '@supabase/supabase-js'
+import { revalidatePath } from 'next/cache'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -238,6 +239,10 @@ export async function PUT(
       .where(eq(events.id, id))
       .returning()
     
+    // Revalidate home page and news page caches
+    revalidatePath('/')
+    revalidatePath('/news')
+    
     console.log('Event updated successfully:', id)
     return NextResponse.json(updatedEvent[0])
   } catch (error) {
@@ -295,6 +300,10 @@ export async function DELETE(
       .delete(events)
       .where(eq(events.id, id))
       .returning()
+    
+    // Revalidate home page and news page caches
+    revalidatePath('/')
+    revalidatePath('/news')
     
     return NextResponse.json({ message: "Event deleted successfully" })
   } catch (error) {

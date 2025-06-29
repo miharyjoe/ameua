@@ -4,6 +4,7 @@ import { news } from "@/schema/schema"
 import { NewsSchema } from "@/schema"
 import { eq } from "drizzle-orm"
 import { createClient } from '@supabase/supabase-js'
+import { revalidatePath } from 'next/cache'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -145,6 +146,10 @@ export async function PUT(
       .where(eq(news.id, id))
       .returning()
     
+    // Revalidate home page and news page caches
+    revalidatePath('/')
+    revalidatePath('/news')
+    
     return NextResponse.json(updatedArticle[0])
   } catch (error) {
     console.error("Error updating article:", error)
@@ -182,6 +187,10 @@ export async function PATCH(
     if (!updatedArticle.length) {
       return NextResponse.json({ error: "Article not found" }, { status: 404 })
     }
+    
+    // Revalidate home page and news page caches when publish status changes
+    revalidatePath('/')
+    revalidatePath('/news')
     
     return NextResponse.json({ 
       success: true, 
@@ -222,6 +231,10 @@ export async function DELETE(
       .delete(news)
       .where(eq(news.id, id))
       .returning()
+    
+    // Revalidate home page and news page caches
+    revalidatePath('/')
+    revalidatePath('/news')
     
     return NextResponse.json({ message: "Article deleted successfully" })
   } catch (error) {
