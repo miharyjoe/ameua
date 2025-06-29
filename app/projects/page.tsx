@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Target, Heart, Users, TrendingUp, DollarSign, Clock, CheckCircle, ArrowRight } from "lucide-react"
+import { useToast } from "@/components/ui/toast"
+import { measurePerformance, PerformanceMonitor } from "@/lib/performance"
+import { Target, Heart, Users, TrendingUp, DollarSign, Clock, CheckCircle, ArrowRight, RefreshCw, X } from "lucide-react"
 
 interface Project {
   id: string
@@ -27,6 +29,54 @@ interface Project {
   createdAt: Date
   updatedAt: Date
 }
+
+interface ApiError extends Error {
+  status: number
+}
+
+class ProjectsApiClient {
+  private async request<T>(url: string, options: RequestInit = {}): Promise<T> {
+    const endTimer = measurePerformance(`API: ${options.method || 'GET'} ${url}`)
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      })
+
+      if (!response.ok) {
+        const error = new Error(await response.text()) as ApiError
+        error.status = response.status
+        throw error
+      }
+
+      return response.json()
+    } finally {
+      endTimer()
+    }
+  }
+
+  async fetchProjects(): Promise<Project[]> {
+    const endTimer = measurePerformance('ProjectsApiClient.fetchProjects')
+    
+    try {
+      const data = await this.request<any[]>('/api/projects')
+      return data.map((project: any) => ({
+        ...project,
+        deadline: project.deadline ? new Date(project.deadline) : null,
+        createdAt: new Date(project.createdAt),
+        updatedAt: new Date(project.updatedAt),
+      }))
+    } finally {
+      endTimer()
+    }
+  }
+}
+
+const projectsApi = new ProjectsApiClient()
 
 const impactStats = [
   { label: "Projets réalisés", value: "25+", icon: CheckCircle },
@@ -78,45 +128,133 @@ const ProjectCardSkeleton = () => (
   </Card>
 )
 
+// Success story skeleton
+const SuccessStoryCardSkeleton = () => (
+  <Card className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Skeleton className="w-full h-[300px]" />
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    </div>
+  </Card>
+)
+
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("current")
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
+
+  const { toast, ToastContainer } = useToast()
 
   useEffect(() => {
     fetchProjects()
   }, [])
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (showRefreshIndicator = false) => {
     try {
-      const response = await fetch('/api/projects')
-      if (!response.ok) {
-        throw new Error('Failed to fetch projects')
+      if (showRefreshIndicator) setRefreshing(true)
+      if (!showRefreshIndicator) setLoading(true)
+      
+      const projectsData = await projectsApi.fetchProjects()
+      setProjects(projectsData)
+      setError(null)
+      
+      if (showRefreshIndicator) {
+        toast({
+          variant: "success",
+          title: "Succès",
+          description: "Projets actualisés avec succès"
+        })
       }
-      const data = await response.json()
-      
-      // Convert date strings to Date objects
-      const projectsWithDates = data.map((project: any) => ({
-        ...project,
-        deadline: project.deadline ? new Date(project.deadline) : null,
-        createdAt: new Date(project.createdAt),
-        updatedAt: new Date(project.updatedAt),
-      }))
-      
-      setProjects(projectsWithDates)
     } catch (error) {
       console.error("Error fetching projects:", error)
       setError("Erreur lors du chargement des projets")
+      toast({
+        variant: "error",
+        title: "Erreur",
+        description: "Erreur lors du chargement des projets"
+      })
     } finally {
       setLoading(false)
+      if (showRefreshIndicator) setRefreshing(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    fetchProjects(true)
+  }
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    // No need to refetch since we already have all data
+    // Only refresh if we don't have data or if there's an error
+    if (projects.length === 0 || error) {
+      fetchProjects(true)
     }
   }
 
   const currentProjects = projects.filter(project => !project.isFinished)
   const successStories = projects.filter(project => project.isFinished)
 
+  // Debug component for development
+  const DebugPanel = () => {
+    const [stats, setStats] = useState<Record<string, any>>({})
+    
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setStats(PerformanceMonitor.getInstance().getStats())
+      }, 1000)
+      
+      return () => clearInterval(interval)
+    }, [])
+
+    if (process.env.NODE_ENV !== 'development' && !showDebugPanel) return null
+
+    return (
+      <div className="fixed bottom-4 left-4 z-50 bg-gray-900 text-white p-4 rounded-lg shadow-lg max-w-md">
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="font-bold text-sm">Performance Stats</h4>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowDebugPanel(false)}
+            className="text-white hover:bg-gray-800"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+        <div className="space-y-1 text-xs">
+          {Object.entries(stats).map(([operation, stat]) => (
+            <div key={operation} className="flex justify-between">
+              <span className="truncate mr-2">{operation}:</span>
+              <span>{stat.latest}ms (avg: {stat.avg}ms)</span>
+            </div>
+          ))}
+          {Object.keys(stats).length === 0 && (
+            <div className="text-gray-400">No metrics yet...</div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col">
+      <ToastContainer />
+      <DebugPanel />
+      
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-100">
         <div className="container mx-auto px-4">
@@ -133,9 +271,62 @@ export default function ProjectsPage() {
               Découvrez nos projets communautaires et contribuez à créer un impact positif durable dans l'éducation et
               la société
             </p>
+            
+            {/* Add refresh button */}
+            <div className="flex justify-center">
+              {process.env.NODE_ENV === 'development' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowDebugPanel(!showDebugPanel)}
+                  className="mr-2"
+                >
+                  Debug
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                {refreshing ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Actualiser
+              </Button>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Show error banner if there's an error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 mx-4 mt-4 rounded-lg">
+          <div className="flex justify-between items-center">
+            <span>{error}</span>
+            <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                Réessayer
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setError(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Impact Stats */}
       <section className="py-16 bg-background">
@@ -159,7 +350,7 @@ export default function ProjectsPage() {
       {/* Main Content */}
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <Tabs defaultValue="current" className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8 rounded-2xl">
               <TabsTrigger value="current" className="rounded-xl">
                 Projets Actuels ({currentProjects.length})
@@ -177,16 +368,7 @@ export default function ProjectsPage() {
                 </p>
               </div>
 
-              {error ? (
-                <Card className="text-center py-12">
-                  <CardContent>
-                    <p className="text-red-600 mb-4">{error}</p>
-                    <Button onClick={fetchProjects} variant="outline">
-                      Réessayer
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : loading ? (
+              {loading ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
                   {Array.from({ length: 6 }).map((_, index) => (
                     <ProjectCardSkeleton key={index} />
@@ -335,22 +517,7 @@ export default function ProjectsPage() {
               {loading ? (
                 <div className="space-y-8">
                   {Array.from({ length: 3 }).map((_, index) => (
-                    <Card key={index} className="shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Skeleton className="w-full h-[300px]" />
-                        <div className="p-6 space-y-4">
-                          <Skeleton className="h-8 w-3/4" />
-                          <Skeleton className="h-4 w-full" />
-                          <Skeleton className="h-4 w-2/3" />
-                          <div className="grid grid-cols-2 gap-4">
-                            <Skeleton className="h-16 w-full" />
-                            <Skeleton className="h-16 w-full" />
-                          </div>
-                          <Skeleton className="h-20 w-full" />
-                          <Skeleton className="h-16 w-full" />
-                        </div>
-                      </div>
-                    </Card>
+                    <SuccessStoryCardSkeleton key={index} />
                   ))}
                 </div>
               ) : successStories.length === 0 ? (
