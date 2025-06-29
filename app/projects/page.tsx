@@ -253,7 +253,6 @@ export default function ProjectsPage() {
   return (
     <div className="flex flex-col">
       <ToastContainer />
-      <DebugPanel />
       
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-br from-green-50 to-emerald-100">
@@ -274,16 +273,6 @@ export default function ProjectsPage() {
             
             {/* Add refresh button */}
             <div className="flex justify-center">
-              {process.env.NODE_ENV === 'development' && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowDebugPanel(!showDebugPanel)}
-                  className="mr-2"
-                >
-                  Debug
-                </Button>
-              )}
               <Button 
                 variant="outline" 
                 size="sm" 
