@@ -38,32 +38,144 @@ const timelineEvents = [
 
 const teamMembers = [
   {
-    name: "Dr. Marie Dubois",
-    role: "Présidente",
-    promo: "Promo 2008",
-    image: "https://placehold.co/200x200",
-    description: "Directrice Innovation chez TechCorp",
+    name: "RASOLOELISON LANTONIAINA",
+    role: "Président",
+    promo: "",
+    image: "",
+    description: "",
   },
   {
-    name: "Jean-Pierre Martin",
-    role: "Vice-Président",
-    promo: "Promo 2010",
-    image: "https://placehold.co/200x200",
-    description: "Consultant en Management",
+    name: "RAKOTOARIMANANA TANTELINIANIAINA",
+    role: "Vice-présidente",
+    promo: "",
+    image: "",
+    description: "",
   },
   {
-    name: "Sarah Johnson",
-    role: "Secrétaire Générale",
-    promo: "Promo 2012",
-    image: "https://placehold.co/200x200",
-    description: "Avocate d'affaires",
+    name: "RAKOTO DAVID OLIVANIAINA",
+    role: "Vice-président",
+    promo: "",
+    image: "",
+    description: "",
   },
   {
-    name: "Ahmed Ben Ali",
+    name: "RAMAROKOTO MAMOLOLOLONA",
+    role: "Secrétaire Général",
+    promo: "",
+    image: "",
+    description: "",
+  },
+  {
+    name: "MAHAZOASY FREDDIE",
+    role: "Secrétaire Général",
+    promo: "",
+    image: "",
+    description: "",
+  },
+  {
+    name: "RANDRIAMANAMPISO AHOLIMALALA",
+    role: "Trésorière",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "NOMENJANAHARY HANJA",
     role: "Trésorier",
-    promo: "Promo 2009",
-    image: "https://placehold.co/200x200",
-    description: "Directeur Financier",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "ANDRIMAMY JOEDA",
+    role: "Responsable Communication",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "ANDRIANARY FENO",
+    role: "Responsable Communication",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "ZAFISOAPRINIVO ROSNY",
+    role: "Responsable Communication",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "MANATO",
+    role: "Responsable Communication",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "ANDRIANISHTHOAR ANA TAHIRY",
+    role: "Responsable RSE",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "RAKOTOMANGA ANDRIANIOHARY",
+    role: "Conseiller",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "RAZAFIMBOLA RIJALY",
+    role: "Conseillère",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "RAKOTOMANGA MALALA",
+    role: "Conseillère",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "BAZAFINDRABE BAKOLY",
+    role: "Conseillère",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "RANARIVONY LOIC",
+    role: "Conseiller",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "JIMALSON GIOVANNI",
+    role: "Conseiller",
+    promo: "",
+    image: "utilisateur.png",
+    description: "",
+  },
+  {
+    name: "RANDRIANANDRASANA TOKY",
+    role: "Conseiller",
+    promo: "",
+    image: "",
+    description: "",
+  },
+  {
+    name: "BENALAZA DONALDI DIAS",
+    role: "Conseiller",
+    promo: "",
+    image: "",
+    description: "",
   },
 ]
 
@@ -468,26 +580,22 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {teamMembers.map((member, index) => (
               <Card key={index} className="text-center shadow-lg rounded-2xl border-0 bg-white overflow-hidden">
                 <CardHeader className="pb-4">
-                  <div className="mx-auto w-24 h-24 rounded-2xl overflow-hidden mb-4">
+                  <div className="mx-auto w-20 h-20 rounded-2xl overflow-hidden mb-3">
                     <img
-                      src={member.image || "/placeholder.svg"}
+                      src={member.image || "utilisateur.png"}
                       alt={member.name}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <CardTitle className="text-lg">{member.name}</CardTitle>
-                  <Badge variant="secondary" className="mx-auto w-fit">
+                  <CardTitle className="text-sm font-semibold leading-tight">{member.name}</CardTitle>
+                  <Badge variant="secondary" className="mx-auto w-fit text-xs">
                     {member.role}
                   </Badge>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-sm text-primary font-medium">{member.promo}</p>
-                  <CardDescription className="text-sm">{member.description}</CardDescription>
-                </CardContent>
               </Card>
             ))}
           </div>
