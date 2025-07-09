@@ -83,10 +83,6 @@ export function Navigation() {
                 height={40}
                 className="object-contain"
                 priority
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
               />
             </div>
             <div className="flex flex-col min-w-0">
